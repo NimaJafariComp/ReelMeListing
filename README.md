@@ -58,6 +58,23 @@ uv run python -m listing_to_reel edit image \
 
 Use `--runtime-config configs/remote_cuda.yaml --profile remote_cuda` for authoritative CUDA evaluation. MPS is for local preview runs only.
 
+## Candidate evaluation and human review
+
+Phase 4 rejects broken artifacts (for example black frames), measures edge preservation, blur, luminance change, and vertical-line drift, then ranks viable candidates. It does **not** automatically certify property truthfulness: viable edits are queued for a blinded human decision.
+
+```bash
+uv run python -m listing_to_reel evaluate images \
+  --edit-run-manifest runs/edits/edit-5cd62bdaf68072ca/manifest.json
+```
+
+This writes an evaluation report and `review.csv` under `runs/evaluations/`. Fill in its `decision`, `reviewer`, and `notes` fields with `accepted_by_human` or `rejected_by_human`, then record the final decision:
+
+```bash
+uv run python -m listing_to_reel evaluate import-review \
+  --evaluation-report runs/evaluations/quality-5cd62bdaf68072ca/report.json \
+  --worksheet runs/evaluations/quality-5cd62bdaf68072ca/review.csv
+```
+
 ## Local setup
 
 ```bash

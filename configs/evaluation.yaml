@@ -1,0 +1,9 @@
+evaluation:
+  analysis_max_dimension: 768
+  edge_f1_warning: 0.40
+  edge_f1_reject: 0.25
+  blur_ratio_warning: 0.55
+  blur_ratio_reject: 0.25
+  black_pixel_reject_fraction: 0.25
+  vertical_line_delta_warning_degrees: 4.0
+  min_edge_pixels: 200

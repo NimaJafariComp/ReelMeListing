@@ -11,6 +11,11 @@ from listing_to_reel.core.environment import collect_environment_snapshot
 from listing_to_reel.editing.instruct_pix2pix import InstructPix2PixEditor
 from listing_to_reel.editing.models import EditRequest
 from listing_to_reel.editing.service import generate_edit_candidates, load_image_editor_config
+from listing_to_reel.evaluation.service import (
+    evaluate_edit_run,
+    import_human_review,
+    load_evaluation_config,
+)
 from listing_to_reel.media.models import ReelRequest
 from listing_to_reel.media.reel import assemble_reel
 
@@ -110,3 +115,37 @@ def edit_image(
     )
     manifest = generate_edit_candidates(request, InstructPix2PixEditor())
     typer.echo(manifest.model_dump_json(indent=2))
+
+
+evaluate_app = typer.Typer(no_args_is_help=True, help="Phase 4 candidate evaluation commands.")
+app.add_typer(evaluate_app, name="evaluate")
+
+
+@evaluate_app.command("images")
+def evaluate_images(
+    edit_run_manifest: Path = typer.Option(
+        ..., "--edit-run-manifest", exists=True, readable=True
+    ),
+    config: Path = typer.Option(
+        Path("configs/evaluation.yaml"), "--config", exists=True, readable=True
+    ),
+    output_dir: Path = typer.Option(
+        Path("runs/evaluations"), help="Ignored Phase 4 report output directory."
+    ),
+) -> None:
+    """Evaluate one complete Phase 3 edit run and export a blinded review worksheet."""
+    report = evaluate_edit_run(edit_run_manifest, load_evaluation_config(config), output_dir)
+    typer.echo(report.model_dump_json(indent=2))
+
+
+@evaluate_app.command("import-review")
+def evaluate_import_review(
+    evaluation_report: Path = typer.Option(..., "--evaluation-report", exists=True, readable=True),
+    worksheet: Path = typer.Option(..., "--worksheet", exists=True, readable=True),
+    output_dir: Path = typer.Option(
+        Path("runs/evaluations"), help="Ignored Phase 4 decision output directory."
+    ),
+) -> None:
+    """Record a completed human decision from the exported review worksheet."""
+    decision = import_human_review(evaluation_report, worksheet, output_dir)
+    typer.echo(decision.model_dump_json(indent=2))
