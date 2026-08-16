@@ -1,0 +1,16 @@
+.DS_Store
+# Keep project plans and ADRs local; README.md is the only publishable Markdown file.
+*.md
+!README.md
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+runs/
+artifacts/
+data/source/

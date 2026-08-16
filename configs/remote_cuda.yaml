@@ -1,0 +1,9 @@
+runtime_profiles:
+  remote_cuda:
+    device: cuda
+    image_resolution: 1024
+    batch_size: 1
+    attention_slicing: false
+    image_editor_mode: evaluation
+    video_generation_enabled: true
+    benchmark_authority: true

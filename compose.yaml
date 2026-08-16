@@ -1,0 +1,29 @@
+name: listing-to-reel
+
+services:
+  dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: ["ltr", "environment"]
+
+  api:
+    profiles: ["api"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    command: ["ltr", "environment"]
+
+  worker-cuda:
+    profiles: ["worker-cuda"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker-cuda
+    environment:
+      LTR_RUNTIME_CONFIG: configs/remote_cuda.yaml
+    command: ["ltr", "config-check", "--config", "configs/remote_cuda.yaml"]
+    gpus: all

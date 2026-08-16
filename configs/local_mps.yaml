@@ -1,0 +1,9 @@
+runtime_profiles:
+  local_mps:
+    device: mps
+    image_resolution: 512
+    batch_size: 1
+    attention_slicing: true
+    image_editor_mode: preview_only
+    video_generation_enabled: false
+    benchmark_authority: false
