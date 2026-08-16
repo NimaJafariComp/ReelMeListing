@@ -1,0 +1,14 @@
+input_quality:
+  analysis_max_dimension: 1024
+  blur_warning_variance: 80.0
+  blur_reject_variance: 25.0
+  highlight_clip_warning_fraction: 0.08
+  highlight_clip_reject_fraction: 0.18
+  shadow_clip_warning_fraction: 0.12
+  shadow_clip_reject_fraction: 0.30
+  color_cast_warning_score: 0.12
+  color_cast_reject_score: 0.22
+  vertical_line_warning_degrees: 5.0
+  vertical_line_reject_degrees: 10.0
+  vertical_line_reject_enabled: false
+  min_vertical_lines: 2

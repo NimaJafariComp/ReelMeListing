@@ -7,8 +7,8 @@ RUN apt-get update \
 
 WORKDIR /workspace
 COPY pyproject.toml README.md ./
-COPY src ./src
+COPY listing_to_reel ./listing_to_reel
 RUN python3 -m pip install --break-system-packages --no-cache-dir ".[gpu]"
 
 COPY . .
-CMD ["ltr", "environment"]
+CMD ["python3", "-m", "listing_to_reel", "environment"]

@@ -9,14 +9,14 @@ services:
     volumes:
       - .:/workspace
     working_dir: /workspace
-    command: ["ltr", "environment"]
+    command: ["python", "-m", "listing_to_reel", "environment"]
 
   api:
     profiles: ["api"]
     build:
       context: .
       dockerfile: docker/Dockerfile.api
-    command: ["ltr", "environment"]
+    command: ["python", "-m", "listing_to_reel", "environment"]
 
   worker-cuda:
     profiles: ["worker-cuda"]
@@ -25,5 +25,5 @@ services:
       dockerfile: docker/Dockerfile.worker-cuda
     environment:
       LTR_RUNTIME_CONFIG: configs/remote_cuda.yaml
-    command: ["ltr", "config-check", "--config", "configs/remote_cuda.yaml"]
+    command: ["python", "-m", "listing_to_reel", "config-check", "--config", "configs/remote_cuda.yaml"]
     gpus: all
