@@ -1,0 +1,14 @@
+image_editor:
+  provider: diffusers
+  adapter: instruct_pix2pix
+  model_id: timbrooks/instruct-pix2pix
+  model_revision: null
+  scheduler: euler_ancestral
+  # Experimental MPS preview: favor a visible time-of-day change while retaining structure checks.
+  torch_dtype: float32
+  num_inference_steps: 40
+  guidance_scale: 10.0
+  image_guidance_scale: 1.0
+  candidate_count: 2
+  max_dimension: 768
+  output_quality: 95

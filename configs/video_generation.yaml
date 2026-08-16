@@ -1,0 +1,16 @@
+video_generator:
+  provider: diffusers
+  adapter: stable_video_diffusion
+  model_id: stabilityai/stable-video-diffusion-img2vid-xt
+  model_revision: null
+  num_frames: 25
+  model_fps: 7
+  output_fps: 6.25
+  motion_bucket_id: 32
+  noise_aug_strength: 0.02
+  decode_chunk_size: 2
+  width: 1024
+  height: 576
+  output_width: 1080
+  output_height: 1920
+  crf: 18

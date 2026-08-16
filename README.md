@@ -77,6 +77,20 @@ uv run python -m listing_to_reel evaluate import-review \
   --worksheet runs/evaluations/quality-5cd62bdaf68072ca/review.csv
 ```
 
+## Four-second hero video
+
+Phase 5 uses CUDA-only Stable Video Diffusion XT to turn an approved hero image into exactly 25 frames at 6.25 fps (four seconds). Its low-motion preset is constrained to a stabilized luxury-listing glide; the output is a vertical MP4 with the complete landscape frame retained over a blurred background rather than cropped.
+
+```bash
+uv sync --extra gpu --python 3.12
+uv run python -m listing_to_reel video generate \
+  --final-decision runs/evaluations/quality-a97e96b8ba7b7abd/final-decision.json
+uv run python -m listing_to_reel video qa \
+  --video-manifest runs/videos/<video-run-id>/manifest.json
+```
+
+Generation requires CUDA. The M5 can run the deterministic mocked tests, encode, and temporal QA, but not the SVD adapter.
+
 ## Local setup
 
 ```bash

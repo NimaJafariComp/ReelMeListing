@@ -1,0 +1,14 @@
+image_editor:
+  provider: diffusers
+  adapter: instruct_pix2pix
+  model_id: timbrooks/instruct-pix2pix
+  model_revision: null
+  scheduler: euler_ancestral
+  # Experimental MPS preview: balance a visible warm-dusk change with geometry retention.
+  torch_dtype: float32
+  num_inference_steps: 40
+  guidance_scale: 8.5
+  image_guidance_scale: 1.15
+  candidate_count: 2
+  max_dimension: 768
+  output_quality: 95

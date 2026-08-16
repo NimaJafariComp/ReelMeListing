@@ -18,6 +18,13 @@ from listing_to_reel.evaluation.service import (
 )
 from listing_to_reel.media.models import ReelRequest
 from listing_to_reel.media.reel import assemble_reel
+from listing_to_reel.video.models import HeroVideoRequest
+from listing_to_reel.video.service import (
+    StableVideoDiffusionGenerator,
+    evaluate_hero_video,
+    generate_hero_video,
+    load_video_generator_config,
+)
 
 app = typer.Typer(no_args_is_help=True, help="Listing-to-Reel development commands.")
 
@@ -123,9 +130,7 @@ app.add_typer(evaluate_app, name="evaluate")
 
 @evaluate_app.command("images")
 def evaluate_images(
-    edit_run_manifest: Path = typer.Option(
-        ..., "--edit-run-manifest", exists=True, readable=True
-    ),
+    edit_run_manifest: Path = typer.Option(..., "--edit-run-manifest", exists=True, readable=True),
     config: Path = typer.Option(
         Path("configs/evaluation.yaml"), "--config", exists=True, readable=True
     ),
@@ -149,3 +154,50 @@ def evaluate_import_review(
     """Record a completed human decision from the exported review worksheet."""
     decision = import_human_review(evaluation_report, worksheet, output_dir)
     typer.echo(decision.model_dump_json(indent=2))
+
+
+video_app = typer.Typer(no_args_is_help=True, help="Phase 5 hero-video generation and QA commands.")
+app.add_typer(video_app, name="video")
+
+
+@video_app.command("generate")
+def generate_video(
+    final_decision: Path = typer.Option(..., "--final-decision", exists=True, readable=True),
+    runtime_config: Path = typer.Option(
+        Path("configs/remote_cuda.yaml"), "--runtime-config", exists=True, readable=True
+    ),
+    profile: str = typer.Option("remote_cuda", "--profile"),
+    config: Path = typer.Option(
+        Path("configs/video_generation.yaml"), "--config", exists=True, readable=True
+    ),
+    seed: int = typer.Option(1, "--seed", min=0),
+    output_dir: Path = typer.Option(
+        Path("runs/videos"), help="Ignored hero-video output directory."
+    ),
+) -> None:
+    """Generate a CUDA-only, four-second hero-video candidate from an approved image."""
+    profiles = load_runtime_config(runtime_config).runtime_profiles
+    if profile not in profiles:
+        raise typer.BadParameter(f"Unknown runtime profile: {profile}")
+    request = HeroVideoRequest(
+        final_decision_path=final_decision,
+        seed=seed,
+        output_dir=output_dir,
+        runtime_profile_name=profile,
+        runtime_profile=profiles[profile],
+        configuration=load_video_generator_config(config),
+    )
+    manifest = generate_hero_video(request, StableVideoDiffusionGenerator())
+    typer.echo(manifest.model_dump_json(indent=2))
+
+
+@video_app.command("qa")
+def video_qa(
+    video_manifest: Path = typer.Option(..., "--video-manifest", exists=True, readable=True),
+    output_dir: Path = typer.Option(
+        Path("runs/video-quality"), help="Ignored QA report directory."
+    ),
+) -> None:
+    """Extract temporal QA evidence and a reviewer worksheet for a hero-video candidate."""
+    report = evaluate_hero_video(video_manifest, output_dir)
+    typer.echo(report.model_dump_json(indent=2))
