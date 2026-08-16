@@ -1,0 +1,14 @@
+image_editor:
+  provider: diffusers
+  adapter: instruct_pix2pix
+  model_id: timbrooks/instruct-pix2pix
+  model_revision: null
+  scheduler: euler_ancestral
+  # Tested local MPS precision; never label this profile as a CUDA benchmark.
+  torch_dtype: float32
+  num_inference_steps: 30
+  guidance_scale: 7.5
+  image_guidance_scale: 1.5
+  candidate_count: 2
+  max_dimension: 768
+  output_quality: 95

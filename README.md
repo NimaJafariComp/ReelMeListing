@@ -58,6 +58,8 @@ uv run python -m listing_to_reel edit image \
 
 Use `--runtime-config configs/remote_cuda.yaml --profile remote_cuda` for authoritative CUDA evaluation. MPS is for local preview runs only.
 
+For a slower, detail-preserving M5 experiment, pass `--config configs/image_editing_mps_high_detail.yaml`. This uses 768px, 30-step float32 MPS inference and remains a preview configuration.
+
 ## Candidate evaluation and human review
 
 Phase 4 rejects broken artifacts (for example black frames), measures edge preservation, blur, luminance change, and vertical-line drift, then ranks viable candidates. It does **not** automatically certify property truthfulness: viable edits are queued for a blinded human decision.
