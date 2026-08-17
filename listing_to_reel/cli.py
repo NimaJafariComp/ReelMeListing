@@ -18,13 +18,20 @@ from listing_to_reel.evaluation.service import (
 )
 from listing_to_reel.media.models import ReelRequest
 from listing_to_reel.media.reel import assemble_reel
-from listing_to_reel.video.models import HeroVideoRequest, InterpolationConfig
+from listing_to_reel.video.models import (
+    HeroVideoRequest,
+    InterpolationConfig,
+    MultiShotInput,
+    MultiShotVideoRequest,
+    PropertyShotRole,
+)
 from listing_to_reel.video.service import (
     StableVideoDiffusionGenerator,
     evaluate_hero_video,
     generate_hero_video,
     interpolate_hero_video,
     load_video_generator_config,
+    plan_multishot_ltx_video,
 )
 
 app = typer.Typer(no_args_is_help=True, help="Listing-to-Reel development commands.")
@@ -159,6 +166,41 @@ def evaluate_import_review(
 
 video_app = typer.Typer(no_args_is_help=True, help="Phase 5 hero-video generation and QA commands.")
 app.add_typer(video_app, name="video")
+
+
+@video_app.command("plan-ltx-multishot")
+def plan_ltx_multishot(
+    property_id: str = typer.Option(..., "--property-id", min=1),
+    shot: list[str] = typer.Option(
+        ...,
+        "--shot",
+        help="Approved view as role=path/to/final-decision.json; repeat four to six times.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("runs/video-plans"), help="Ignored LTX multi-shot plan output directory."
+    ),
+) -> None:
+    """Plan four to six independently generated LTX shots for one property."""
+    planned_inputs = []
+    for value in shot:
+        role, separator, decision_path = value.partition("=")
+        if not separator or not decision_path:
+            raise typer.BadParameter("Each --shot must be role=path/to/final-decision.json.")
+        try:
+            planned_inputs.append(
+                MultiShotInput(role=PropertyShotRole(role), final_decision_path=Path(decision_path))
+            )
+        except ValueError as error:
+            choices = ", ".join(item.value for item in PropertyShotRole)
+            message = f"Unknown shot role '{role}'. Use one of: {choices}."
+            raise typer.BadParameter(message) from error
+    request = MultiShotVideoRequest(
+        property_id=property_id,
+        shots=planned_inputs,
+        output_dir=output_dir,
+    )
+    manifest = plan_multishot_ltx_video(request)
+    typer.echo(manifest.model_dump_json(indent=2))
 
 
 @video_app.command("generate")

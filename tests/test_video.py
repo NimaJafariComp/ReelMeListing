@@ -14,11 +14,19 @@ from listing_to_reel.evaluation.models import (
     FinalDecisionRecord,
     RunDecision,
 )
-from listing_to_reel.video.models import HeroVideoRequest, InterpolationConfig, VideoGeneratorConfig
+from listing_to_reel.video.models import (
+    HeroVideoRequest,
+    InterpolationConfig,
+    MultiShotInput,
+    MultiShotVideoRequest,
+    PropertyShotRole,
+    VideoGeneratorConfig,
+)
 from listing_to_reel.video.service import (
     evaluate_hero_video,
     generate_hero_video,
     interpolate_hero_video,
+    plan_multishot_ltx_video,
 )
 
 
@@ -40,9 +48,9 @@ class FakeVideoGenerator:
         return "deadbeef", frames
 
 
-def _approved_decision(tmp_path: Path) -> Path:
+def _approved_decision(tmp_path: Path, color: str = "#d8b084") -> Path:
     hero = tmp_path / "hero.jpg"
-    image = Image.new("RGB", (320, 180), "#d8b084")
+    image = Image.new("RGB", (320, 180), color)
     drawing = ImageDraw.Draw(image)
     drawing.rectangle((80, 30, 240, 170), outline="black", width=5)
     image.save(hero)
@@ -91,6 +99,15 @@ def _approved_decision(tmp_path: Path) -> Path:
     decision_path = tmp_path / "decision.json"
     decision_path.write_text(decision.model_dump_json(), encoding="utf-8")
     return decision_path
+
+
+def _approved_decisions(tmp_path: Path, count: int) -> list[Path]:
+    decisions = []
+    for index in range(count):
+        directory = tmp_path / f"view-{index}"
+        directory.mkdir()
+        decisions.append(_approved_decision(directory, f"#{index + 1:02x}b084"))
+    return decisions
 
 
 def test_mocked_video_generation_and_temporal_qa(tmp_path: Path) -> None:
@@ -155,3 +172,31 @@ def test_interpolation_preserves_duration_and_outputs_30fps(tmp_path: Path) -> N
         ).metrics.frame_count
         == 120
     )
+
+
+def test_multishot_ltx_plan_requires_approved_distinct_views(tmp_path: Path) -> None:
+    decisions = _approved_decisions(tmp_path, 4)
+    plan = plan_multishot_ltx_video(
+        MultiShotVideoRequest(
+            property_id="demo-property-001",
+            output_dir=tmp_path / "plans",
+            shots=[
+                MultiShotInput(
+                    role=PropertyShotRole.WIDE_EXTERIOR, final_decision_path=decisions[0]
+                ),
+                MultiShotInput(role=PropertyShotRole.BACKYARD, final_decision_path=decisions[1]),
+                MultiShotInput(
+                    role=PropertyShotRole.ARCHITECTURAL_DETAIL,
+                    final_decision_path=decisions[2],
+                ),
+                MultiShotInput(
+                    role=PropertyShotRole.CLOSING_HERO, final_decision_path=decisions[3]
+                ),
+            ],
+        )
+    )
+
+    assert plan.adapter == "ltx_video_2b_distilled"
+    assert plan.total_duration_seconds == 8.0
+    assert len(plan.source_coverage) == 4
+    assert (tmp_path / "plans" / plan.run_id / "manifest.json").is_file()

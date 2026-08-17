@@ -27,6 +27,9 @@ from listing_to_reel.video.models import (
     HeroVideoRequest,
     InterpolatedVideoManifest,
     InterpolationConfig,
+    MultiShotVideoPlanManifest,
+    MultiShotVideoRequest,
+    PlannedLtxShot,
     TemporalMetrics,
     VideoDecision,
     VideoGeneratorConfig,
@@ -88,6 +91,64 @@ def _approved_hero(
     if hero_hash != candidate.candidate_sha256:
         raise ValueError("Approved hero image hash no longer matches the Phase 4 report.")
     return decision, report, hero, hero_hash
+
+
+def _shot_duration(count: int) -> float:
+    """Keep a 4–6-view reel inside the agreed 8–10 second delivery range."""
+    return {4: 2.0, 5: 1.8, 6: 1.5}[count]
+
+
+def plan_multishot_ltx_video(request: MultiShotVideoRequest) -> MultiShotVideoPlanManifest:
+    """Create an auditable, non-rendering plan for independent LTX I2V shots.
+
+    Each shot remains anchored to an approved real view.  The plan deliberately
+    does not generate transitions or unseen property views.
+    """
+    duration = _shot_duration(len(request.shots))
+    planned_shots: list[PlannedLtxShot] = []
+    coverage: dict[str, str] = {}
+    identity: list[dict[str, str]] = []
+    for index, shot in enumerate(request.shots, start=1):
+        decision, report, image, image_hash = _approved_hero(shot.final_decision_path)
+        if image_hash in coverage:
+            raise ValueError("Each multi-shot plan must reference distinct approved images.")
+        treatment = (
+            f"{shot.role.value.replace('_', ' ')}; slow stabilized gimbal glide; subtle "
+            "parallax; premium natural grading; preserve every visible architectural and "
+            "landscape feature; do not reveal or invent unseen areas."
+        )
+        planned_shots.append(
+            PlannedLtxShot(
+                index=index,
+                role=shot.role,
+                final_decision_path=str(shot.final_decision_path),
+                evaluation_report_path=decision.evaluation_report_path,
+                source_image_path=str(image),
+                source_image_sha256=image_hash,
+                duration_seconds=duration,
+                treatment=treatment,
+            )
+        )
+        coverage[str(image)] = f"included_as_ltx_{shot.role.value}_shot"
+        identity.append({"role": shot.role.value, "sha256": image_hash})
+    payload = json.dumps(
+        {"property_id": request.property_id, "shots": identity},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    run_id = f"ltx-plan-{hashlib.sha256(payload.encode()).hexdigest()[:16]}"
+    manifest = MultiShotVideoPlanManifest(
+        run_id=run_id,
+        created_at=datetime.now(UTC),
+        property_id=request.property_id,
+        shots=planned_shots,
+        total_duration_seconds=duration * len(planned_shots),
+        source_coverage=coverage,
+    )
+    run_dir = request.output_dir / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    return manifest
 
 
 class StableVideoDiffusionGenerator:

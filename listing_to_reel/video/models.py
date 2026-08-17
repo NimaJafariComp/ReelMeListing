@@ -20,6 +20,17 @@ class VideoDecision(StrEnum):
     REJECTED_BY_HUMAN = "rejected_by_human"
 
 
+class PropertyShotRole(StrEnum):
+    """Truthful, source-backed roles for a property reel shot."""
+
+    WIDE_EXTERIOR = "wide_exterior"
+    SECOND_EXTERIOR = "second_exterior"
+    BACKYARD = "backyard"
+    POOL_OR_PATIO = "pool_or_patio"
+    ARCHITECTURAL_DETAIL = "architectural_detail"
+    CLOSING_HERO = "closing_hero"
+
+
 class VideoGeneratorConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -70,6 +81,62 @@ class HeroVideoRequest(BaseModel):
         "Smooth stabilized lateral gimbal glide with subtle parallax; deliberate framing; "
         "slow premium real-estate cinematography; preserve all visible property features."
     )
+
+
+class MultiShotInput(BaseModel):
+    """One approved source view that will become one independently generated shot."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    role: PropertyShotRole
+    final_decision_path: Path
+
+
+class MultiShotVideoRequest(BaseModel):
+    """Plan only; LTX rendering is intentionally a separate later operation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    property_id: str = Field(min_length=1, max_length=120)
+    shots: list[MultiShotInput] = Field(min_length=4, max_length=6)
+    output_dir: Path = Path("runs/video-plans")
+
+    @model_validator(mode="after")
+    def validate_shots(self) -> MultiShotVideoRequest:
+        roles = [shot.role for shot in self.shots]
+        paths = [shot.final_decision_path for shot in self.shots]
+        if len(set(roles)) != len(roles):
+            raise ValueError("Each multi-shot role may appear only once.")
+        if len(set(paths)) != len(paths):
+            raise ValueError("Each planned shot must use a distinct approved source view.")
+        if PropertyShotRole.WIDE_EXTERIOR not in roles:
+            raise ValueError("A multi-shot plan requires a wide_exterior source view.")
+        if PropertyShotRole.CLOSING_HERO not in roles:
+            raise ValueError("A multi-shot plan requires a closing_hero source view.")
+        return self
+
+
+class PlannedLtxShot(BaseModel):
+    index: int = Field(ge=1)
+    role: PropertyShotRole
+    final_decision_path: str
+    evaluation_report_path: str
+    source_image_path: str
+    source_image_sha256: str
+    duration_seconds: float = Field(ge=1.5, le=2.0)
+    treatment: str
+
+
+class MultiShotVideoPlanManifest(BaseModel):
+    run_id: str
+    phase: str = "phase_5_ltx_multishot_plan"
+    created_at: datetime
+    property_id: str
+    provider: str = "comfyui"
+    adapter: str = "ltx_video_2b_distilled"
+    shots: list[PlannedLtxShot]
+    total_duration_seconds: float = Field(ge=8, le=10)
+    source_coverage: dict[str, str]
 
 
 class HeroVideoManifest(BaseModel):
