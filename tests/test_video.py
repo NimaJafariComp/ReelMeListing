@@ -311,6 +311,7 @@ def test_ltx_renders_only_explicitly_selected_three_second_bridge(tmp_path: Path
     assert bridge.from_view == "03-front-day-left"
     assert bridge.to_view == "05-front-day-wide"
     assert bridge.workflow["9"]["class_type"] == "LTXVAddGuide"
-    assert bridge.workflow["10"]["inputs"]["frame_idx"] == 88
-    assert bridge.workflow["19"]["class_type"] == "SaveWEBM"
+    assert bridge.workflow["10"]["inputs"]["frame_idx"] == 104
+    assert bridge.workflow["18"]["class_type"] == "LTXVCropGuides"
+    assert bridge.workflow["20"]["class_type"] == "SaveWEBM"
     assert Path(bridge.generated_path).is_file()

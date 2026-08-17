@@ -227,8 +227,9 @@ def _bridge_prompt(candidate: LtxBridgeCandidate) -> str:
 def _bridge_latent_frames(config: LtxComfyUiConfig, duration_seconds: float) -> int:
     """Map a user-selected 2–4 second delivery duration to LTX's 8n+1 latent length."""
     desired_delivery_frames = round(duration_seconds * config.fps)
-    # Two single-frame guides add two temporal VAE slots (16 decoded frames).
-    desired_latent_delivery = max(17, desired_delivery_frames - 16)
+    # LTXVCropGuides removes the two guide slots after sampling, so the requested
+    # latent duration is the delivery duration rather than the longer working duration.
+    desired_latent_delivery = max(17, desired_delivery_frames)
     lower = ((desired_latent_delivery - 1) // 8) * 8 + 1
     upper = lower + 8
     return lower if desired_latent_delivery - lower <= upper - desired_latent_delivery else upper
@@ -345,11 +346,22 @@ def build_ltx_bridge_workflow(
                 "latent_image": ["10", 2],
             },
         },
-        "18": {"class_type": "VAEDecode", "inputs": {"samples": ["17", 0], "vae": ["3", 0]}},
+        "18": {
+            "class_type": "LTXVCropGuides",
+            "inputs": {
+                "positive": ["10", 0],
+                "negative": ["10", 1],
+                "latent": ["17", 0],
+            },
+        },
         "19": {
+            "class_type": "VAEDecode",
+            "inputs": {"samples": ["18", 2], "vae": ["3", 0]},
+        },
+        "20": {
             "class_type": "SaveWEBM",
             "inputs": {
-                "images": ["18", 0],
+                "images": ["19", 0],
                 "filename_prefix": prefix,
                 "codec": "vp9",
                 "fps": float(config.fps),
