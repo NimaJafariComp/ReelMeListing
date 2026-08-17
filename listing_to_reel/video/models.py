@@ -97,6 +97,30 @@ class HeroVideoManifest(BaseModel):
     source_coverage: dict[str, str]
 
 
+class InterpolationConfig(BaseModel):
+    """FFmpeg motion-compensated interpolation settings for delivery playback."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    target_fps: int = Field(default=30, ge=24, le=60)
+    crf: int = Field(default=18, ge=0, le=51)
+
+
+class InterpolatedVideoManifest(BaseModel):
+    run_id: str
+    phase: str = "phase_5_frame_interpolation"
+    created_at: datetime
+    parent_video_manifest_path: str
+    parent_video_run_id: str
+    hero_image_path: str
+    input_path: str
+    input_sha256: str
+    configuration: InterpolationConfig
+    output_path: str
+    output_sha256: str
+    video: VideoMetadata
+
+
 class TemporalMetrics(BaseModel):
     frame_count: int = Field(ge=1)
     duration_seconds: float = Field(ge=0)

@@ -18,11 +18,12 @@ from listing_to_reel.evaluation.service import (
 )
 from listing_to_reel.media.models import ReelRequest
 from listing_to_reel.media.reel import assemble_reel
-from listing_to_reel.video.models import HeroVideoRequest
+from listing_to_reel.video.models import HeroVideoRequest, InterpolationConfig
 from listing_to_reel.video.service import (
     StableVideoDiffusionGenerator,
     evaluate_hero_video,
     generate_hero_video,
+    interpolate_hero_video,
     load_video_generator_config,
 )
 
@@ -201,3 +202,18 @@ def video_qa(
     """Extract temporal QA evidence and a reviewer worksheet for a hero-video candidate."""
     report = evaluate_hero_video(video_manifest, output_dir)
     typer.echo(report.model_dump_json(indent=2))
+
+
+@video_app.command("interpolate")
+def interpolate_video(
+    video_manifest: Path = typer.Option(..., "--video-manifest", exists=True, readable=True),
+    target_fps: int = typer.Option(30, "--target-fps", min=24, max=60),
+    output_dir: Path = typer.Option(
+        Path("runs/interpolated-videos"), help="Ignored interpolation output directory."
+    ),
+) -> None:
+    """Create a four-second 24/30fps delivery candidate with motion interpolation."""
+    manifest = interpolate_hero_video(
+        video_manifest, InterpolationConfig(target_fps=target_fps), output_dir
+    )
+    typer.echo(manifest.model_dump_json(indent=2))

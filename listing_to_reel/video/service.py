@@ -25,6 +25,8 @@ from listing_to_reel.media.ffmpeg import probe_video, require_ffmpeg, run_ffmpeg
 from listing_to_reel.video.models import (
     HeroVideoManifest,
     HeroVideoRequest,
+    InterpolatedVideoManifest,
+    InterpolationConfig,
     TemporalMetrics,
     VideoDecision,
     VideoGeneratorConfig,
@@ -228,6 +230,68 @@ def generate_hero_video(request: HeroVideoRequest, generator: VideoGenerator) ->
     return manifest
 
 
+def interpolate_hero_video(
+    video_manifest_path: Path, config: InterpolationConfig, output_dir: Path
+) -> InterpolatedVideoManifest:
+    """Create a 24/30fps delivery candidate without altering its four-second duration."""
+    source = HeroVideoManifest.model_validate_json(video_manifest_path.read_text(encoding="utf-8"))
+    source_path = Path(source.output_path)
+    source_hash = _sha256(source_path)
+    if source_hash != source.output_sha256:
+        raise ValueError("Hero video hash no longer matches its generation manifest.")
+    payload = f"{source_hash}:{config.model_dump_json()}".encode()
+    run_id = f"interpolate-{hashlib.sha256(payload).hexdigest()[:16]}"
+    run_dir = output_dir / run_id
+    output = run_dir / "hero_30fps.mp4"
+    require_ffmpeg()
+    run_dir.mkdir(parents=True, exist_ok=True)
+    command = [
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        str(source_path),
+        "-vf",
+        "tpad=stop_mode=clone:stop_duration=0.5,"
+        f"minterpolate=fps={config.target_fps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1",
+        "-r",
+        str(config.target_fps),
+        "-t",
+        f"{source.video.duration_seconds:.6f}",
+        "-an",
+        "-c:v",
+        "libx264",
+        "-crf",
+        str(config.crf),
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        str(output),
+    ]
+    run_ffmpeg(command)
+    metadata = probe_video(output)
+    if abs(metadata.duration_seconds - source.video.duration_seconds) > 0.05:
+        raise ValueError("Interpolation changed the hero-video duration.")
+    manifest = InterpolatedVideoManifest(
+        run_id=run_id,
+        created_at=datetime.now(UTC),
+        parent_video_manifest_path=str(video_manifest_path),
+        parent_video_run_id=source.run_id,
+        hero_image_path=source.hero_image_path,
+        input_path=str(source_path),
+        input_sha256=source_hash,
+        configuration=config,
+        output_path=str(output),
+        output_sha256=_sha256(output),
+        video=metadata,
+    )
+    (run_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    return manifest
+
+
 def _edge_f1(reference: np.ndarray, frame: np.ndarray) -> float:
     reference = cv2.resize(
         reference, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_AREA
@@ -244,9 +308,15 @@ def _edge_f1(reference: np.ndarray, frame: np.ndarray) -> float:
 
 
 def evaluate_hero_video(video_manifest_path: Path, output_dir: Path) -> VideoQualityReport:
-    manifest = HeroVideoManifest.model_validate_json(
-        video_manifest_path.read_text(encoding="utf-8")
-    )
+    payload = json.loads(video_manifest_path.read_text(encoding="utf-8"))
+    if payload.get("phase") == "phase_5_frame_interpolation":
+        manifest = InterpolatedVideoManifest.model_validate(payload)
+        expected_frame_count = round(
+            manifest.video.duration_seconds * manifest.configuration.target_fps
+        )
+    else:
+        manifest = HeroVideoManifest.model_validate(payload)
+        expected_frame_count = manifest.configuration.num_frames
     capture = cv2.VideoCapture(manifest.output_path)
     frames: list[np.ndarray] = []
     while True:
@@ -255,7 +325,7 @@ def evaluate_hero_video(video_manifest_path: Path, output_dir: Path) -> VideoQua
             break
         frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
     capture.release()
-    if len(frames) != manifest.configuration.num_frames:
+    if len(frames) != expected_frame_count:
         raise ValueError("Decoded frame count differs from the generation manifest.")
     with Image.open(manifest.hero_image_path) as hero_file:
         hero = cv2.cvtColor(np.asarray(hero_file.convert("RGB")), cv2.COLOR_RGB2GRAY)

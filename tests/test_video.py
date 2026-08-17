@@ -14,8 +14,12 @@ from listing_to_reel.evaluation.models import (
     FinalDecisionRecord,
     RunDecision,
 )
-from listing_to_reel.video.models import HeroVideoRequest, VideoGeneratorConfig
-from listing_to_reel.video.service import evaluate_hero_video, generate_hero_video
+from listing_to_reel.video.models import HeroVideoRequest, InterpolationConfig, VideoGeneratorConfig
+from listing_to_reel.video.service import (
+    evaluate_hero_video,
+    generate_hero_video,
+    interpolate_hero_video,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -117,3 +121,37 @@ def test_mocked_video_generation_and_temporal_qa(tmp_path: Path) -> None:
     assert len(manifest.frame_sha256) == 25
     assert report.metrics.frame_count == 25
     assert Path(report.review_worksheet_path or "").is_file()
+
+
+def test_interpolation_preserves_duration_and_outputs_30fps(tmp_path: Path) -> None:
+    request = HeroVideoRequest(
+        final_decision_path=_approved_decision(tmp_path),
+        seed=3,
+        output_dir=tmp_path / "runs",
+        runtime_profile_name="remote_cuda",
+        runtime_profile=RuntimeProfile(
+            device="cuda",
+            image_resolution=1024,
+            batch_size=1,
+            attention_slicing=False,
+            image_editor_mode="evaluation",
+            video_generation_enabled=True,
+            benchmark_authority=True,
+        ),
+        configuration=VideoGeneratorConfig(),
+    )
+    source = generate_hero_video(request, FakeVideoGenerator())
+    manifest = interpolate_hero_video(
+        request.output_dir / source.run_id / "manifest.json",
+        InterpolationConfig(),
+        tmp_path / "interpolated",
+    )
+
+    assert manifest.video.duration_seconds == 4.0
+    assert manifest.video.frame_rate == "30/1"
+    assert (
+        evaluate_hero_video(
+            tmp_path / "interpolated" / manifest.run_id / "manifest.json", tmp_path / "qa"
+        ).metrics.frame_count
+        == 120
+    )

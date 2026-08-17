@@ -91,6 +91,13 @@ uv run python -m listing_to_reel video qa \
 
 Generation requires CUDA. The M5 can run the deterministic mocked tests, encode, and temporal QA, but not the SVD adapter.
 
+To create a 30fps delivery candidate from SVD's 6.25fps output, then rerun strict QA:
+
+```bash
+uv run python -m listing_to_reel video interpolate --video-manifest runs/videos/<video-run-id>/manifest.json
+uv run python -m listing_to_reel video qa --video-manifest runs/interpolated-videos/<interpolation-run-id>/manifest.json
+```
+
 ## Local setup
 
 ```bash
