@@ -1,351 +1,331 @@
-# Listing-to-Reel
+<p align="center">
+  <img src="webapp/public/static/reelmelisting-logo.png" width="96" alt="ReelMeListing logo">
+</p>
 
-An auditable generative-media pipeline for real-estate marketing.
+<h1 align="center">ReelMeListing</h1>
 
-## Phase 0 status
+<p align="center">A local studio and auditable media pipeline for turning property photos into reviewed listing reels.</p>
 
-Phase 0 establishes reproducibility only. It does not run image or video models.
+<p align="center">
+  <a href="#run-the-local-studio">Run locally</a> ·
+  <a href="#how-the-pipeline-works">Pipeline</a> ·
+  <a href="#local-api">API</a> ·
+  <a href="#testing-and-builds">Tests</a>
+</p>
 
-- `local_mps` is the Apple-silicon development and preview profile.
-- `remote_cuda` is the authoritative inference and benchmark profile.
-- Runtime validation never silently falls back from MPS or CUDA to CPU.
-- Source-image rights and hashes are recorded in `data/manifests/`.
+ReelMeListing helps developers and visual-media teams assemble short vertical property reels from real source photos. It records source hashes, configuration, quality reports, and output artifacts. It also supports local image-edit candidates and an optional ComfyUI/LTX video workflow on CUDA hardware.
 
-## Deterministic baseline reel
+The project does not certify that generated media is truthful. A human must review every delivery candidate. LTX bridges are synthetic architectural visualizations, not verified walkthroughs.
 
-Phase 1 uses Pillow and FFmpeg only—no model inference or AI editing. It creates a fixed 9:16 crop, a subtle deterministic zoom, crossfades, an H.264 MP4, and a JSON run manifest.
+## What the project does
 
-```bash
-brew install ffmpeg # macOS, once
+The normal browser workflow is:
+
+1. Upload two to twelve photos of one property
+2. Label each photo by visible area and viewpoint
+3. Select only compatible photo pairs for an optional LTX bridge
+4. Assemble a deterministic 9:16 reel and inspect per-image input quality results
+5. Optionally create image-edit candidates, then review them before video generation
+
+The browser runs against a localhost-only FastAPI service. It stores uploaded files, job records, reports, and generated artifacts under `runs/service/`.
+
+| Capability | Status | What it does |
+|---|---|---|
+| Deterministic reel | Available in browser and CLI | Creates a 1080×1920 H.264 reel from ordered photos with fixed crops, zoom, and cross-dissolves |
+| Input quality gate | Available in browser and CLI | Measures blur, clipping, color cast, and vertical-line quality before model work |
+| Day-to-dusk image edit | Available locally | Runs pretrained InstructPix2Pix after an accepted input-quality report |
+| Candidate evaluation | Available in CLI | Measures structural and image-quality signals, then exports a human-review worksheet |
+| LTX source clips and bridges | Available in CLI with native ComfyUI | Renders LTX candidates, runs temporal screening, and exports a review worksheet |
+| LoRA readiness | Available in browser and CLI | Checks whether a licensed, property-separated paired dataset is ready for a reviewed pilot |
+
+## Run the local studio
+
+The React application is bundled and served by the FastAPI process. You do not need Docker for the normal workflow.
+
+### Prerequisites
+
+- Python 3.12 or 3.13
+- [uv](https://docs.astral.sh/uv/)
+- Node.js and npm
+- FFmpeg on your `PATH`
+
+Install the base and development dependencies, then install the web dependencies:
+
+```sh
 uv sync --extra dev --python 3.12
-uv run python -m listing_to_reel reel assemble \
-  --image data/source/unsplash_exteriors/001.jpg \
-  --image data/source/unsplash_exteriors/002.jpg \
-  --image data/source/unsplash_exteriors/003.jpg \
-  --image data/source/unsplash_exteriors/004.jpg \
-  --image data/source/unsplash_exteriors/005.jpg
+npm --prefix webapp ci
 ```
 
-The command prints the reel path and its companion JSON manifest. Output is placed under `runs/` and is intentionally ignored by Git.
-
-## Input quality gate
-
-Phase 2 captures EXIF metadata and evaluates blur, exposure clipping, color cast, and vertical-line quality before any model runs.
-
-```bash
-uv run python -m listing_to_reel analyze input \
-  --image data/source/unsplash_exteriors/001.jpg \
-  --image data/source/unsplash_exteriors/002.jpg \
-  --config configs/input_quality.yaml
-```
-
-The command writes an `InputQualityReport` JSON file and an optional vertical-line diagnostic overlay under `runs/input-quality/`. Vertical-line analysis is warning-only by default because it is a perspective proxy, not proof of a bad photo.
-
-## Baseline image editing
-
-Phase 3 uses the MIT-licensed InstructPix2Pix checkpoint as a configurable, pretrained baseline. It requires an **accepted** Phase 2 report, saves source/config/seed/model-revision provenance, and leaves accept/reject decisions to Phase 4.
-
-The local Apple-Silicon profile uses float32 decoding for reliable MPS output. CUDA runs may use a float16 configuration override after their own benchmark and quality evaluation.
-
-```bash
-uv sync --extra mps --python 3.12
-uv run python -m listing_to_reel edit image \
-  --image data/source/unsplash_exteriors/001.jpg \
-  --input-quality-report runs/input-quality/input-574fd8d0144c5c94/report.json \
-  --instruction "Convert this daylight exterior to a natural premium golden-hour scene; preserve exact house geometry, windows, landscaping, driveway, and vertical lines." \
-  --seed 42
-```
-
-Use `--runtime-config configs/remote_cuda.yaml --profile remote_cuda` for authoritative CUDA evaluation. MPS is for local preview runs only.
-
-For a slower, detail-preserving M5 experiment, pass `--config configs/image_editing_mps_high_detail.yaml`. This uses 768px, 30-step float32 MPS inference and remains a preview configuration.
-
-## Candidate evaluation and human review
-
-Phase 4 rejects broken artifacts (for example black frames), measures edge preservation, blur, luminance change, and vertical-line drift, then ranks viable candidates. It does **not** automatically certify property truthfulness: viable edits are queued for a blinded human decision.
-
-```bash
-uv run python -m listing_to_reel evaluate images \
-  --edit-run-manifest runs/edits/edit-5cd62bdaf68072ca/manifest.json
-```
-
-This writes an evaluation report and `review.csv` under `runs/evaluations/`. Fill in its `decision`, `reviewer`, and `notes` fields with `accepted_by_human` or `rejected_by_human`, then record the final decision:
-
-```bash
-uv run python -m listing_to_reel evaluate import-review \
-  --evaluation-report runs/evaluations/quality-5cd62bdaf68072ca/report.json \
-  --worksheet runs/evaluations/quality-5cd62bdaf68072ca/review.csv
-```
-
-## LTX / ComfyUI multi-shot video
-
-Phase 5 uses LTX image-to-video through ComfyUI on the CUDA PC. The final reel is made from four to six independently generated, source-anchored shots of **one property**—never an invented camera flight between unrelated views.
-
-Before rendering, create an auditable plan from independently approved source views. Each role may appear once; a wide exterior and a closing hero are required. The plan assigns 1.5–2 seconds per shot for an 8–10 second reel and records every source image used.
-
-```bash
-uv run python -m listing_to_reel video plan-ltx-multishot \
-  --property-id property-001 \
-  --shot wide_exterior=runs/evaluations/front/final-decision.json \
-  --shot backyard=runs/evaluations/backyard/final-decision.json \
-  --shot architectural_detail=runs/evaluations/detail/final-decision.json \
-  --shot closing_hero=runs/evaluations/hero/final-decision.json
-```
-
-The planner creates an auditable shot plan. Rendering uses **ComfyUI/LTX only** and generates
-native 16:9 landscape candidates; it never crops the foreground property to fill portrait.
-Set `comfyui_root` in `configs/ltx_comfyui.yaml` to the local ComfyUI checkout, start ComfyUI,
-then render the source-anchored candidates:
-
-```powershell
-uv run --no-sync python -m listing_to_reel video render-ltx `
-  --property-id synthetic-simple-suburban-home `
-  --source 03-front-day-left=data/source/synthetic_simple_suburban_home/03-front-day-left.png,slow_lateral_gimbal_glide `
-  --source 05-front-day-wide=data/source/synthetic_simple_suburban_home/05-front-day-wide.png,gentle_dolly_in `
-  --source 02-covered-patio=data/source/synthetic_simple_suburban_home/02-covered-patio.png,slow_lateral_gimbal_glide `
-  --source 04-backyard-patio=data/source/synthetic_simple_suburban_home/04-backyard-patio.png,gentle_dolly_in `
-  --source 01-front-twilight=data/source/synthetic_simple_suburban_home/01-front-twilight.png,slow_lateral_gimbal_glide `
-  --bridge-candidate front-left-to-front-wide=3.5 `
-  --bridge-candidate patio-to-backyard=3.5 `
-  --bridge-candidate front-day-to-twilight=3.0
-
-uv run --no-sync python -m listing_to_reel video qa-ltx `
-  --render-manifest runs/ltx-videos/<run-id>/manifest.json
-```
-
-### Control reel pacing
-
-Choose the total delivery length and desired invented-bridge duration. The timed planner gives
-each selected compatible LTX bridge that duration, distributes all remaining time evenly across
-its follow-on source views, records the resulting playback speeds, and uses cinematic dissolves
-between unrelated areas. For example, this requests a 20-second reel with three-second bridges:
-
-```powershell
-uv run --no-sync python -m listing_to_reel video plan-ltx-reel `
-  --render-manifest runs/ltx-videos/<run-id>/manifest.json `
-  --total-seconds 20 `
-  --bridge-seconds 3 `
-  --scene-fade-seconds 0.45 `
-  --bridge front-left-to-front-wide `
-  --bridge patio-to-backyard `
-  --bridge front-day-to-twilight
-```
-
-Use `--bridge-duration candidate=seconds` when one compatible transition needs a different
-pace. This makes a 15-second reel with a five-second front transition and three-second remaining
-transitions:
-
-```powershell
-uv run --no-sync python -m listing_to_reel video plan-ltx-reel `
-  --render-manifest runs/ltx-videos/<run-id>/manifest.json `
-  --total-seconds 15 `
-  --bridge-seconds 3 `
-  --bridge front-left-to-front-wide `
-  --bridge patio-to-backyard `
-  --bridge front-day-to-twilight `
-  --bridge-duration front-left-to-front-wide=5
-```
-
-Bridge duration must be 2–6 seconds. Select only pairs with compatible visual overlap; a
-front-to-backyard or otherwise unrelated change is planned as a 0.2–1.0 second cinematic
-cross-dissolve, not an invented camera move. The fade duration is included in the requested final
-reel length.
-
-Render that saved plan—not merely source clips—into the final bridge-and-clip timeline:
-
-```powershell
-uv run --no-sync python -m listing_to_reel video assemble-ltx-timed-reel `
-  --plan runs/ltx-timed-reels/<plan-run-id>/plan.json
-```
-
-For an arbitrary compatible pair from the supplied source views, define it explicitly at render
-time. It remains queued for human review and is never auto-accepted:
-
-```powershell
---bridge-pair patio-to-yard=02-covered-patio,04-backyard-patio,spatial_overlap `
---bridge-candidate patio-to-yard=3
-```
-
-The render manifest records the exact ComfyUI node graph, pinned model/encoder/VAE names,
-prompt, source hashes, coverage, output hashes, and generated clips. QA writes a mandatory
-human-review worksheet for every clip and for generated, user-selected spatial/lighting bridges.
-Each `--bridge-candidate` accepts a per-transition 2–4 second invented duration. Nothing is
-auto-accepted: reject a bridge if geometry changes or temporal artifacts occur; use clean cuts for
-unrelated views. The final portrait editor retains the complete landscape foreground over a blurred
-background fill. After recording human approval, assemble only the names that were approved, in
-edit order:
-
-### Choosing bridge candidates
-
-Group source images by property and label their visible area and viewpoint, for example
-`front-left`, `front-wide`, `backyard`, or `patio`. Select a spatial bridge only when its two
-images show the same or an adjacent physical area with enough visual overlap for a plausible camera
-move. LTX then invents a **3-second**, smooth, continuous camera transition between the two
-endpoint images. It is not a crossfade, slideshow, or static morph. Use a restrained lateral or
-forward gimbal treatment, and reject the candidate if architecture, landscaping, perspective, or
-layout changes.
-
-Images without a compatible, explicitly selected pair remain separate LTX shots and are joined by
-intentional cuts. Select a lighting-only bridge only for near-identical framing of the same view,
-such as `front-wide-daytime` to `front-wide-twilight`; it may alter sky, ambient light, and
-practical lighting, but must keep camera framing and property geometry fixed. Any reel containing
-invented bridges must be labelled **Synthetic architectural visualization** rather than a verified
-walkthrough.
-
-The current demo includes three candidate IDs for the committed synthetic property:
-`front-left-to-front-wide`, `patio-to-backyard`, and `front-day-to-twilight`. Arbitrary compatible
-source-view pairs are also supported through `--bridge-pair`. Use `assemble-ltx-timed-reel` with a
-saved timed plan to include selected generated bridges in the final reel. `assemble-ltx` remains a
-separate, clip-only assembly command for simple source-clip reels.
-
-```powershell
-uv run --no-sync python -m listing_to_reel video assemble-ltx `
-  --render-manifest runs/ltx-videos/<run-id>/manifest.json `
-  --accepted-clip 03-front-day-left `
-  --accepted-clip 05-front-day-wide `
-  --accepted-clip 02-covered-patio `
-  --accepted-clip 04-backyard-patio `
-  --accepted-clip 01-front-twilight
-```
-
-## Phase 6: CUDA benchmark and optimization evidence
-
-Phase 6 records comparable, hardware-specific LTX measurements. Run the baseline and an optimized
-configuration on the same CUDA PC with the same source images, model revision, resolution, frame
-count, FPS, and bridge endpoints. Record actual stopwatch timings for the named stages; the command
-also captures the current CUDA device, live allocated/reserved VRAM, PyTorch/CUDA environment,
-render provenance, and linked QA result. M5 preview runs cannot be recorded as authoritative
-benchmarks.
-
-```powershell
-uv run --no-sync python -m listing_to_reel benchmark record-ltx `
-  --label baseline-8-step `
-  --cohort rtx-4070-super-cuda-12.6 `
-  --render-manifest runs/ltx-videos/<run-id>/manifest.json `
-  --quality-report runs/ltx-quality/<quality-id>/report.json `
-  --stage load=18.4 `
-  --stage generation=642.7 `
-  --stage qa=14.2
-
-uv run --no-sync python -m listing_to_reel benchmark compare-ltx `
-  --baseline runs/benchmarks/<baseline-id>/record.json `
-  --candidate runs/benchmarks/<candidate-id>/record.json
-```
-
-The comparison rejects mismatched source/model/delivery workloads, reports generation and total
-speedup plus VRAM delta, and accepts an optimization only when it is faster, has no measured
-quality regression, and the candidate is not rejected by QA.
-
-## Phase 7: local job API and artifacts
-
-Phase 7 exposes a localhost-only FastAPI service with durable SQLite job records, atomic worker claims,
-terminal failure state, retry, and SHA-256-tracked artifact downloads. The initial supported job is
-the deterministic `fixture_reel`, so the service can be validated without model inference. Bind it
-only to localhost; it has no multi-tenant isolation.
-
-```powershell
-uv run --extra dev uvicorn listing_to_reel.api.app:app --host 127.0.0.1 --port 8000
-```
-
-The service is intentionally bound to `127.0.0.1` and has no local API key. Submit `POST /jobs` with `{"kind":"fixture_reel","source_paths":["/absolute/a.jpg","/absolute/b.jpg"]}`.
-Use `GET /jobs/{id}` for state, `POST /jobs/{id}/retry` after a failure, and
-`GET /jobs/{id}/artifacts` or `/jobs/{id}/artifacts/{name}` for the persisted lineage and download.
-
-### Start the local studio
-
-Docker is intentionally not the normal local launcher: the app needs direct access to Apple MPS or
-the NVIDIA GPU and to the native ComfyUI model checkout. The bundled React studio is served by the
-FastAPI process, so one command starts the normal app:
+Start the studio and open [http://127.0.0.1:8000](http://127.0.0.1:8000):
 
 ```sh
 make run
 ```
 
-On Apple Silicon, use the MPS-enabled image-editing dependencies:
+On Apple Silicon, install the MPS image-editing extras and start the MPS profile:
 
 ```sh
+uv sync --extra mps --python 3.12
 make run-mps
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). ComfyUI is still started separately, and only
-when rendering LTX clips on the CUDA workstation.
+The MPS profile supports preview-only image editing. It does not enable video generation or authoritative benchmarks.
 
-### Phase 7.5: browser reel builder
+### Use CUDA for evaluation and LTX rendering
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000) after starting the local API. The bundled React + TypeScript
-studio uploads 2–12 selected photos, labels each visible area and viewpoint, records user-selected
-compatible pairs for invented LTX bridges, offers 8–20 second delivery and 0.2–5 second dissolve controls,
-shows local runtime compatibility and per-image QA evidence, and submits local InstructPix2Pix image-edit
-jobs. Bridge selections are retained in job lineage; the current deterministic assembly uses intentional
-dissolves until the selected LTX bridge render is approved.
+The `remote_cuda` profile enables evaluation-mode image editing, video generation, and benchmark recording. Install the GPU extras on the CUDA workstation and confirm that its PyTorch build detects the GPU before running model work:
 
-For hot-reload frontend development:
-
-```powershell
-cd webapp
-npm install
-npm run dev
+```sh
+uv sync --extra gpu --python 3.12
+uv run python -c "import torch; print(torch.cuda.is_available())"
 ```
 
-## Phase 8: LoRA readiness gate
+LTX rendering also requires a native ComfyUI checkout. Point `configs/ltx_comfyui.yaml` at that checkout, install the configured LTX checkpoint, text encoder, and VAE, then start ComfyUI on `127.0.0.1:8188` before using the LTX CLI commands.
 
-Phase 8 does **not** train by default. It determines whether one narrow, frozen-base
-InstructPix2Pix LoRA experiment is justified for natural exterior day-to-dusk conversion. Training
-is blocked unless all of the following are present:
+## Use the browser studio
 
-- licensed assets with derivative, training, and portfolio rights recorded per image;
-- same-property, same-camera-view daylight-to-dusk pairs whose geometry was verified;
-- train, validation, and held-out test splits grouped by property, with no property in more than one split;
-- recorded geometry-gate, structure-conditioning comparison, reproducible video-QA, and baseline-comparison evidence.
+The browser exposes four tabs:
 
-The LoRA pilot configuration is versioned in `configs/lora_pilot.yaml`. It freezes the base model,
-trains only the image-editing adapter, and never trains a video model.
+| Tab | Use it for | Important behavior |
+|---|---|---|
+| **Reel studio** | Upload, label, order, and assemble photos | Sends 2–12 images to the local API and creates the deterministic reel |
+| **Image edit** | Create InstructPix2Pix candidates | Requires one uploaded photo and an input-quality acceptance result |
+| **Quality** | Inspect input QA and save a generated MP4 | QA informs review; it does not prove property truthfulness |
+| **Improve a treatment** | Check LoRA pilot readiness | Reads local JSON manifests in the browser and does not start training |
 
-Create two local JSON files: a dataset manifest and an evidence manifest. A dataset manifest has
-`assets` (each with `asset_id`, `listing_group_id`, `split`, `role`, `source_uri`, `rights_basis`,
-`rights_evidence_ref`, and the three permission booleans) plus `pairs` (each with `pair_id`,
-`source_asset_id`, `target_asset_id`, `same_camera_view`, and `geometry_verified`). Roles must be
-`daylight_source` and `dusk_target`; splits must be `train`, `validation`, or `test`. The evidence
-manifest contains these four report references:
+### Choose a bridge or a cut
 
-```json
-{
-  "geometry_gate_report": "runs/evaluations/geometry.json",
-  "structure_conditioning_comparison": "runs/evaluations/controlnet-comparison.json",
-  "reproducible_video_qa_report": "runs/ltx-quality/report.json",
-  "baseline_comparison_report": "runs/evaluations/baseline-comparison.json"
-}
+Only select a bridge for views of the same property with plausible visual overlap. The browser stores that selection in job lineage. The current browser reel remains deterministic and joins all shots with cross-dissolves; it does not invoke ComfyUI or render LTX bridges.
+
+Use the CLI LTX workflow to render a selected bridge and assemble it into a final reel. Use a deliberate cut for unrelated areas, uncertain geometry, or an LTX candidate that fails review.
+
+| Control | Allowed values | Default | Effect |
+|---|---:|---:|---|
+| Photo count | 2–12 | None | Ordered source set for one property |
+| Visible area | `front`, `backyard`, `patio`, `pool`, `detail`, `unclassified` | `unclassified` | Stored with each upload in job lineage |
+| Viewpoint | `left angle`, `wide view`, `right angle`, `close detail`, `unclassified` | `unclassified` | Helps identify compatible bridge pairs |
+| Bridge intent | `Camera move` or `Lighting only` | Camera move | Stored for a later LTX render; lighting-only also requires same-composition confirmation |
+| Bridge length | 0.75–5s | 3s | Stored in job lineage; LTX CLI accepts 2–6s bridge durations |
+| Final length | 8–20s | 12s | Sets deterministic reel target duration |
+| Scene dissolve | 0.2–5s | 0.5s | Sets the cross-dissolve duration between deterministic reel shots |
+| Render profile | `local_mps`, `remote_cuda` | `local_mps` | Selects the runtime profile for image-edit jobs |
+
+> [!NOTE]
+> A lighting-only bridge fits two images with essentially the same camera position and framing, such as a daytime and twilight pair. It may change light and sky, but not visible property features.
+
+## How the pipeline works
+
+The deterministic reel and local job API run without a queue service. FastAPI schedules one in-process background task per submitted job. SQLite records state transitions and artifact metadata.
+
+```mermaid
+flowchart LR
+    B[Browser studio] -->|POST /uploads| U[Local upload directory]
+    B -->|POST /jobs| A[FastAPI local job API]
+    A --> J[(SQLite jobs database)]
+    A --> W[In-process worker]
+    U --> W
+    W --> Q[Input quality analysis]
+    Q --> R[FFmpeg deterministic reel]
+    Q --> E[InstructPix2Pix image edit]
+    R --> O[Local artifacts and manifests]
+    E --> O
+    O --> B
+    C[Native ComfyUI on CUDA] --> L[LTX CLI render and QA]
+    L --> O
 ```
 
-Run the assessment locally:
+Every processing path writes run-specific JSON manifests. Those records include source paths and hashes; model paths also record runtime, configuration, and output provenance.
 
-```powershell
-uv run --no-sync python -m listing_to_reel lora assess `
-  --dataset-manifest path/to/licensed-pairs.json `
-  --evidence path/to/training-evidence.json
+### Quality and review gates
+
+Input QA checks blur, highlight and shadow clipping, color cast, and vertical-line error. Vertical-line rejection is disabled in the default configuration because it is a perspective proxy.
+
+Image candidate evaluation measures edge preservation, blur ratio, luminance change, black pixels, and vertical-line drift. Video QA measures frame differences, edge preservation against the hero image, and black-frame fraction. These checks may reject an artifact or queue it for human review; they do not approve a property claim.
+
+### Image editing
+
+`configs/image_editing.yaml` selects the Diffusers InstructPix2Pix adapter (`timbrooks/instruct-pix2pix`) and produces two candidates at 512 px by default. The MPS-specific configurations retain float32 decoding and can raise the working dimension to 768 px for preview experiments.
+
+Use an accepted input-quality report when running the CLI directly:
+
+```sh
+uv run python -m listing_to_reel edit image \
+  --image data/source/synthetic_simple_suburban_home/03-front-day-left.png \
+  --input-quality-report runs/input-quality/your_report_id/report.json \
+  --instruction "Convert this daylight exterior to a natural warm dusk scene; preserve visible geometry." \
+  --seed 42
 ```
 
-It writes an ignored `runs/lora-readiness/<run-id>/report.json` with either
-`training_permitted` or `not_justified` and precise reason codes. The browser builder exposes the
-same authenticated readiness check: choose the two JSON files in **Check training readiness**.
-It deliberately does not expose a Train button; a CUDA training invocation is authorized only after
-this gate returns `training_permitted` and the resulting held-out evaluation plan is reviewed.
+Run `analyze input` first to create `your_report_id`:
 
-## Local setup
-
-```bash
-uv sync --extra dev
-uv run python -m listing_to_reel config-check --config configs/local_mps.yaml
-uv run python -m listing_to_reel environment
-uv run pytest
-uv run ruff check .
+```sh
+uv run python -m listing_to_reel analyze input \
+  --image data/source/synthetic_simple_suburban_home/03-front-day-left.png
 ```
 
-To probe your M5's MPS backend before model work, install PyTorch only:
+### LTX clips, bridges, and final reels
 
-```bash
-uv sync --extra dev --extra mps
-uv run python -m listing_to_reel environment
+The LTX CLI uses ComfyUI and the settings in `configs/ltx_comfyui.yaml`. It renders native 16:9 source clips at 1024×576, 89 frames, and 30 fps. Final LTX delivery reels use a portrait treatment that retains the landscape foreground and fills the remaining space with a blurred background.
+
+Render only explicitly named source views and compatible bridge pairs:
+
+```sh
+uv run python -m listing_to_reel video render-ltx \
+  --property-id synthetic-simple-suburban-home \
+  --source front_left=data/source/synthetic_simple_suburban_home/03-front-day-left.png,slow_lateral_gimbal_glide \
+  --source front_wide=data/source/synthetic_simple_suburban_home/05-front-day-wide.png,gentle_dolly_in \
+  --bridge-pair front_left_to_wide=front_left,front_wide,spatial_overlap \
+  --bridge-candidate front_left_to_wide=3 \
+  --config configs/ltx_comfyui.yaml
 ```
 
-Do not install the `gpu` extra on macOS for this phase. Install it in the remote NVIDIA worker environment.
+Screen the rendered candidates before assembly:
+
+```sh
+uv run python -m listing_to_reel video qa-ltx \
+  --render-manifest runs/ltx-videos/your_run_id/manifest.json
+```
+
+The QA command exports a review worksheet. Assemble only clips and bridges that a reviewer approves. A reel containing an invented bridge must be described as a **synthetic architectural visualization**.
+
+### LoRA readiness, not automatic training
+
+The project does not train a model by default. It can assess whether a narrow InstructPix2Pix LoRA pilot has the required rights, matched daylight-to-dusk pairs, property-separated train/validation/test splits, and prerequisite evaluation evidence.
+
+```sh
+uv run python -m listing_to_reel lora assess \
+  --dataset-manifest path/to/dataset_manifest.json \
+  --evidence path/to/evidence.json
+```
+
+The pilot configuration lives in `configs/lora_pilot.yaml`. It freezes the base model and targets the image-editing adapter only.
+
+## Local API
+
+The API binds to `127.0.0.1` in the documented commands. It has no authentication and no multi-tenant isolation, so do not expose it beyond the local machine.
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/` | Serves the bundled React studio |
+| `GET` | `/runtime` | Reports environment capabilities and configured MPS/CUDA profiles |
+| `POST` | `/uploads` | Stores 1–12 JPEG, PNG, or WebP files, each up to 20 MB |
+| `POST` | `/jobs` | Submits a `fixture_reel` or `image_edit` job and returns `202 Accepted` |
+| `GET` | `/jobs` | Lists local jobs |
+| `GET` | `/jobs/{job_id}` | Fetches one job and its status |
+| `POST` | `/jobs/{job_id}/retry` | Requeues a failed job; returns `409` for other states |
+| `GET` | `/jobs/{job_id}/artifacts` | Lists stored artifacts with SHA-256 and size |
+| `GET` | `/jobs/{job_id}/artifacts/{name}` | Downloads one artifact |
+| `POST` | `/lora/readiness` | Evaluates a LoRA dataset and evidence manifest without training |
+
+This request uses two tracked synthetic sample views and creates a 12-second deterministic reel with a 0.5-second dissolve. If you upload files first, replace these paths with the `source_paths` returned by `POST /uploads`:
+
+```sh
+curl --request POST http://127.0.0.1:8000/jobs \
+  --header "Content-Type: application/json" \
+  --data '{
+    "kind": "fixture_reel",
+    "source_paths": [
+      "data/source/synthetic_simple_suburban_home/03-front-day-left.png",
+      "data/source/synthetic_simple_suburban_home/05-front-day-wide.png"
+    ],
+    "settings": {
+      "target_duration_seconds": 12,
+      "transition_seconds": 0.5
+    },
+    "image_annotations": [
+      {"index": 0, "area": "front", "viewpoint": "wide view"},
+      {"index": 1, "area": "backyard", "viewpoint": "wide view"}
+    ]
+  }'
+```
+
+`POST /jobs` rejects invalid image counts, missing image-edit instructions, annotations outside the submitted photo list, and bridges that reuse the same source index. It also returns the job in `queued`, `running`, `succeeded`, or `failed` state.
+
+## Configure runtimes and models
+
+Configuration is file-based. There is no required `.env` file and the repository defines no cloud API key.
+
+| File | Controls |
+|---|---|
+| `configs/local_mps.yaml` | Apple Silicon preview profile: MPS, 512 px image editing, attention slicing, no video or benchmark authority |
+| `configs/remote_cuda.yaml` | CUDA evaluation profile: 1024 px image editing, video enabled, benchmark authority |
+| `configs/image_editing.yaml` | InstructPix2Pix model, scheduler, steps, guidance, candidates, and output size |
+| `configs/input_quality.yaml` | Input-quality thresholds and vertical-line policy |
+| `configs/evaluation.yaml` | Candidate-evaluation thresholds |
+| `configs/ltx_comfyui.yaml` | Native ComfyUI endpoint, model paths, resolution, frame count, FPS, steps, and seed |
+| `configs/lora_pilot.yaml` | Frozen-base LoRA pilot settings |
+
+`compose.yaml` and the two Dockerfiles are validation profiles, not the normal studio deployment path. They run environment or runtime-configuration commands. The API Docker image does not launch Uvicorn or build the frontend.
+
+## Testing and builds
+
+Use the repository Makefile for the standard checks:
+
+```sh
+make lint
+make test
+make web-build
+```
+
+The checks map to these commands:
+
+- `uv run --extra dev ruff check .`
+- `uv run --extra dev pytest`
+- `npm --prefix webapp run build`
+
+For frontend hot reload, start Vite separately after installing web dependencies:
+
+```sh
+npm --prefix webapp run dev
+```
+
+Vite proxies browser API requests to the local FastAPI service during development. Run the API in another terminal with `make run` or `make run-mps`.
+
+## Repository map
+
+```text
+listing_to_reel/
+  analysis/       input-quality analysis
+  api/            localhost FastAPI service and SQLite job repository
+  editing/        InstructPix2Pix request, generation, and provenance
+  evaluation/     candidate metrics and human-review import
+  finetuning/     LoRA readiness contracts and checks
+  media/          image normalization, FFmpeg, and deterministic reel assembly
+  video/          Stable Video Diffusion and ComfyUI/LTX workflows
+configs/          runtime, quality, model, LTX, and LoRA settings
+webapp/           React + TypeScript browser studio and production bundle
+tests/            pytest coverage for the pipeline and API
+data/manifests/   source and rights metadata for the sample image set
+artifacts/        tracked example LTX inputs and rendered outputs
+```
+
+## Sample assets
+
+The repository contains two distinct sample sets:
+
+- `data/source/synthetic_simple_suburban_home/`: five related views of a synthetic property for multi-view workflow testing
+- `data/source/unsplash_exteriors/`: 27 individual Unsplash exterior photos with provenance in `data/manifests/unsplash_exterior_mvp.json`
+
+The Unsplash images are not a single listing. Their manifest marks `listing_group_id` as `null`, so do not use them as a multi-view property set. Review each source's rights, depicted-property considerations, and public-use suitability before reuse.
+
+Tracked LTX renders live under `artifacts/ltx-timed-reels/`. They are reference outputs, not a claim that every generated frame is property-accurate. The repository has a brand logo but no maintained browser screenshot or GIF for the README.
+
+## Security, privacy, and limits
+
+- **Local only**: Bind the service to `127.0.0.1`; it has no authentication or tenant boundaries
+- **Uploads**: The API accepts only JPEG, PNG, and WebP uploads, with 1–12 files and a 20 MB maximum per file
+- **Persistence**: Jobs and artifacts remain in `runs/service/`; source files, manifests, and outputs contain local paths and hashes
+- **Human review**: Input QA and candidate metrics are screening tools, not proof of factual property representation
+- **Synthetic transitions**: Do not present LTX bridges as a verified physical camera path between photographs
+
+## Current constraints
+
+- The browser can plan bridges but does not yet render LTX clips or bridges itself
+- ComfyUI/LTX setup is manual and CUDA-specific
+- Stable Video Diffusion is a separate, CUDA-only four-second hero-clip path; the browser does not submit it
+- The LoRA feature checks readiness only; it does not start or manage training
+- No deployment configuration, CI workflow, remote storage, cloud inference provider, analytics, or user authentication is included
+
+## License
+
+`pyproject.toml` declares the project as MIT-licensed. This repository does not currently include a top-level `LICENSE` file. Add the license text before distributing the project as an open-source package.
