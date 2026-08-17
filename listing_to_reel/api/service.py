@@ -309,14 +309,9 @@ def create_app(
     repository = JobRepository(db_path)
     worker = Worker(repository, artifact_root)
     app = FastAPI(title="ReelMeListing local job API", version="0.1.0")
-    fallback_static_dir = Path(__file__).parent / "static"
     webapp_dist = Path(__file__).parents[2] / "webapp" / "dist"
-    static_dir = (
-        webapp_dist / "static" if (webapp_dist / "static").is_dir() else fallback_static_dir
-    )
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
-    if (webapp_dist / "assets").is_dir():
-        app.mount("/assets", StaticFiles(directory=webapp_dist / "assets"), name="webapp-assets")
+    app.mount("/static", StaticFiles(directory=webapp_dist / "static"), name="static")
+    app.mount("/assets", StaticFiles(directory=webapp_dist / "assets"), name="webapp-assets")
 
     def require(job_id: str) -> Job:
         job = repository.get(job_id)
@@ -326,12 +321,7 @@ def create_app(
 
     @app.get("/", include_in_schema=False)
     def home() -> FileResponse:
-        index_path = (
-            webapp_dist / "index.html"
-            if webapp_dist.is_dir()
-            else fallback_static_dir / "index.html"
-        )
-        return FileResponse(index_path)
+        return FileResponse(webapp_dist / "index.html")
 
     @app.post("/jobs", response_model=Job, status_code=202)
     def submit(request: SubmitJob, tasks: BackgroundTasks) -> Job:

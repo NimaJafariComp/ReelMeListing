@@ -4,6 +4,9 @@
 !README.md
 .venv/
 webapp/node_modules/
+webapp/*.tsbuildinfo
+webapp/vite.config.js
+webapp/vite.config.d.ts
 __pycache__/
 *.py[cod]
 .pytest_cache/
