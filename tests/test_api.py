@@ -14,6 +14,7 @@ def test_fixture_job_reaches_terminal_state_and_exposes_artifacts(tmp_path: Path
         sources.append(path)
     app = create_app(tmp_path / "jobs.sqlite", tmp_path / "artifacts")
     with TestClient(app) as client:
+        assert client.get("/").status_code == 200
         response = client.post(
             "/jobs", json={"kind": "fixture_reel", "source_paths": [str(path) for path in sources]}
         )

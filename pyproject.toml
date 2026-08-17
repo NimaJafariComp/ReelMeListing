@@ -12,6 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "Listing-to-Reel contributors" }]
 dependencies = [
   "fastapi>=0.115,<1",
+  "python-multipart>=0.0.20,<1",
   "numpy>=2.0,<3",
   "opencv-python-headless>=4.10,<5",
   "pydantic>=2.10,<3",

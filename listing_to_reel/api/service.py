@@ -7,17 +7,19 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from listing_to_reel.media.models import ReelRequest
+from listing_to_reel.media.models import ReelRequest, ReelSettings
 from listing_to_reel.media.reel import assemble_reel
 
 
 class SubmitJob(BaseModel):
     kind: str = "fixture_reel"
     source_paths: list[Path] = Field(min_length=2, max_length=12)
+    settings: ReelSettings = Field(default_factory=ReelSettings)
 
 
 class Job(BaseModel):
@@ -183,7 +185,10 @@ class Worker:
             if not all(path.is_file() for path in paths):
                 raise FileNotFoundError("One or more fixture source images are missing.")
             work = self.artifact_root / job.id
-            manifest = assemble_reel(ReelRequest(source_paths=paths, output_dir=work))
+            settings = ReelSettings.model_validate(job.payload["settings"])
+            manifest = assemble_reel(
+                ReelRequest(source_paths=paths, output_dir=work, settings=settings)
+            )
             result = {
                 "run_id": manifest.run_id,
                 "source_coverage": {path: "included" for path in manifest.source_paths},
@@ -203,6 +208,8 @@ def create_app(
     repository = JobRepository(db_path)
     worker = Worker(repository, artifact_root)
     app = FastAPI(title="ReelMeListing local job API", version="0.1.0")
+    static_dir = Path(__file__).parent / "static"
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     def require(job_id: str) -> Job:
         job = repository.get(job_id)
@@ -210,11 +217,31 @@ def create_app(
             raise HTTPException(404, "Job not found")
         return job
 
+    @app.get("/", include_in_schema=False)
+    def home() -> FileResponse:
+        return FileResponse(static_dir / "index.html")
+
     @app.post("/jobs", response_model=Job, status_code=202)
     def submit(request: SubmitJob, tasks: BackgroundTasks) -> Job:
         job = repository.create(request)
         tasks.add_task(worker.run_once)
         return job
+
+    @app.post("/uploads")
+    async def upload(files: list[UploadFile] = File(...)) -> dict[str, list[str]]:
+        if not 2 <= len(files) <= 12:
+            raise HTTPException(422, "Select between two and twelve images.")
+        upload_dir = artifact_root / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        paths: list[str] = []
+        for upload_file in files:
+            if not (upload_file.content_type or "").startswith("image/"):
+                raise HTTPException(415, "Only image uploads are supported.")
+            suffix = Path(upload_file.filename or "image.jpg").suffix.lower() or ".jpg"
+            destination = upload_dir / f"{uuid.uuid4().hex}{suffix}"
+            destination.write_bytes(await upload_file.read())
+            paths.append(str(destination))
+        return {"source_paths": paths}
 
     @app.get("/jobs", response_model=list[Job])
     def jobs() -> list[Job]:

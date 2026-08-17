@@ -251,6 +251,13 @@ Submit `POST /jobs` with `{"kind":"fixture_reel","source_paths":["/absolute/a.jp
 Use `GET /jobs/{id}` for state, `POST /jobs/{id}/retry` after a failure, and
 `GET /jobs/{id}/artifacts` or `/jobs/{id}/artifacts/{name}` for the persisted lineage and download.
 
+### Phase 7.5: browser reel builder
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) after starting the local API. The browser app
+uploads 2–12 selected photos, lets you set the final reel length and dissolve duration, submits the
+API job, polls its state, plays the saved MP4, and provides a download link. This UI currently uses
+the deterministic reel job; LTX generation remains the explicit CUDA/ComfyUI workflow documented above.
+
 ## Local setup
 
 ```bash

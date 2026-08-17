@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ReelMeListing</title><link rel="stylesheet" href="/static/styles.css"></head>
+<body><main><header><p class="eyebrow">LOCAL REEL STUDIO</p><h1>Turn property photos into a reel.</h1><p class="lede">Choose the photos. Set the pacing. Keep the rendered MP4 in your browser.</p></header>
+<section class="builder"><label class="drop"><input id="photos" type="file" accept="image/*" multiple><strong>Select property photos</strong><span>2–12 images · order is your story</span></label><div id="thumbs" class="thumbs"></div>
+<div class="controls"><label>Final length <output id="durationOut">12s</output><input id="duration" type="range" min="10" max="15" step="1" value="12"></label><label>Scene dissolve <output id="transitionOut">0.5s</output><input id="transition" type="range" min="0.2" max="2" step="0.1" value="0.5"></label></div>
+<button id="generate" disabled>Generate reel</button><p id="status" role="status">Select at least two photos to begin.</p></section>
+<section id="result" hidden><p class="eyebrow">YOUR REEL</p><video id="player" controls playsinline></video><a id="download" download>Save MP4</a></section></main><script src="/static/app.js"></script></body></html>
