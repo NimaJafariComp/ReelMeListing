@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+import "./hero.css";
 
 type Tab = "studio" | "edit" | "quality" | "training";
 type Photo = { file: File; url: string; area: string; viewpoint: string };
@@ -135,7 +136,7 @@ function App() {
 
   return <main>
     <header className="topbar"><a className="brand" href="#studio"><img src="/static/reelmelisting-logo.png" alt="ReelMeListing" /><span>ReelMe<span>Listing</span></span></a><div className="machine"><i className={selectedRuntime?.compatible ? "online" : ""} /> {selectedRuntime?.device.toUpperCase() ?? "LOCAL"} · {selectedRuntime?.compatible ? "ready" : selectedRuntime?.warning ?? "checking"}</div></header>
-    <section className="hero"><p className="kicker">LOCAL ARCHITECTURAL STUDIO</p><h1>Make the property<br /><em>move with purpose.</em></h1><p>Turn property photos into a reel, then review it before delivery.</p></section>
+    <section className="hero"><p className="kicker">LOCAL ARCHITECTURAL STUDIO</p><h1>Make <em>property reels.</em></h1><p>Turn property photos into a reel, then review it before delivery.</p></section>
     <nav className="tabs" aria-label="Studio sections">{(["studio", "edit", "quality", "training"] as Tab[]).map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item === "studio" ? "Reel studio" : item === "edit" ? "Image edit" : item === "quality" ? "Quality" : "Improve a treatment"}</button>)}</nav>
     {tab === "studio" && <section className="panel studio" id="studio"><div className="panel-head"><div><p className="kicker">01 / PROPERTY STORYBOARD</p><h2>Upload and label every view.</h2></div><label className="upload">Add photos<input type="file" accept="image/*" multiple onChange={(event) => addPhotos(event.target.files)} /></label></div>
       {photos.length === 0 ? <div className="empty"><span>✦</span><strong>Start with 2–12 photos of one property.</strong><p>Keep unrelated properties in separate projects.</p></div> : <div className="photo-grid">{photos.map((photo, index) => <article className="photo-card" key={photo.url}><img src={photo.url} alt={`Property view ${index + 1}`} /><div className="photo-meta"><b>{String(index + 1).padStart(2, "0")}</b><select value={photo.area} onChange={(event) => updatePhoto(index, "area", event.target.value)}><option>unclassified</option><option>front</option><option>backyard</option><option>patio</option><option>pool</option><option>detail</option></select><select value={photo.viewpoint} onChange={(event) => updatePhoto(index, "viewpoint", event.target.value)}><option>unclassified</option><option>left angle</option><option>wide view</option><option>right angle</option><option>close detail</option></select></div></article>)}</div>}
