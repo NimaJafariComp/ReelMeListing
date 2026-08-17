@@ -23,6 +23,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from listing_to_reel.core.config import load_runtime_config
+from listing_to_reel.core.environment import collect_environment_snapshot
 from listing_to_reel.media.models import ReelRequest, ReelSettings
 from listing_to_reel.media.reel import assemble_reel
 
@@ -31,6 +33,7 @@ class SubmitJob(BaseModel):
     kind: str = "fixture_reel"
     source_paths: list[Path] = Field(min_length=2, max_length=12)
     settings: ReelSettings = Field(default_factory=ReelSettings)
+    runtime_profile_name: str = "local_mps"
 
 
 class Job(BaseModel):
@@ -249,6 +252,27 @@ def create_app(
         job = repository.create(request)
         tasks.add_task(worker.run_once)
         return job
+
+    @app.get("/runtime")
+    def runtime(_: None = Depends(authorize)) -> dict[str, object]:
+        snapshot = collect_environment_snapshot()
+        profiles = {}
+        for path in [Path("configs/local_mps.yaml"), Path("configs/remote_cuda.yaml")]:
+            for name, profile in load_runtime_config(path).runtime_profiles.items():
+                compatible = (
+                    snapshot.capabilities.mps_available
+                    if profile.device.value == "mps"
+                    else snapshot.capabilities.cuda_available
+                )
+                profiles[name] = {
+                    "device": profile.device.value,
+                    "compatible": compatible,
+                    "benchmark_authority": profile.benchmark_authority,
+                    "warning": (
+                        None if compatible else f"{profile.device.value.upper()} unavailable"
+                    ),
+                }
+        return {"environment": snapshot.model_dump(mode="json"), "profiles": profiles}
 
     @app.post("/uploads")
     async def upload(
