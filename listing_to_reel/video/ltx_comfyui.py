@@ -309,11 +309,48 @@ def render_ltx_views(
     return manifest
 
 
-def _edge_f1(first: np.ndarray, second: np.ndarray) -> float:
+def _edge_f1(first: np.ndarray, second: np.ndarray, mask: np.ndarray | None = None) -> float:
     first_edges = cv2.Canny(first, 80, 160) > 0
     second_edges = cv2.Canny(second, 80, 160) > 0
+    if mask is not None:
+        first_edges &= mask
+        second_edges &= mask
     overlap = np.logical_and(first_edges, second_edges).sum()
     return float((2 * overlap) / max(first_edges.sum() + second_edges.sum(), 1))
+
+
+def _camera_aligned_edge_f1(source: np.ndarray, frame: np.ndarray) -> float:
+    """Measure geometry after removing the allowed stabilized camera translation."""
+    warp = np.eye(2, 3, dtype=np.float32)
+    try:
+        cv2.findTransformECC(
+            source,
+            frame,
+            warp,
+            cv2.MOTION_EUCLIDEAN,
+            (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 50, 1e-5),
+        )
+    except cv2.error:
+        return _edge_f1(source, frame)
+    aligned = cv2.warpAffine(
+        frame,
+        warp,
+        (source.shape[1], source.shape[0]),
+        flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
+        borderMode=cv2.BORDER_CONSTANT,
+    )
+    source_mask = np.full(source.shape, 255, dtype=np.uint8)
+    mask = (
+        cv2.warpAffine(
+            source_mask,
+            warp,
+            (source.shape[1], source.shape[0]),
+            flags=cv2.INTER_NEAREST | cv2.WARP_INVERSE_MAP,
+            borderMode=cv2.BORDER_CONSTANT,
+        )
+        > 0
+    )
+    return _edge_f1(source, aligned, mask)
 
 
 def evaluate_ltx_render(manifest_path: Path, output_dir: Path) -> LtxQualityReport:
@@ -342,7 +379,7 @@ def evaluate_ltx_render(manifest_path: Path, output_dir: Path) -> LtxQualityRepo
             frame_difference_cv=float(np.std(differences) / max(np.mean(differences), 1e-6))
             if differences
             else 0.0,
-            minimum_edge_f1_to_hero=min(_edge_f1(source, frame) for frame in frames),
+            minimum_edge_f1_to_hero=min(_camera_aligned_edge_f1(source, frame) for frame in frames),
             maximum_black_pixel_fraction=max(float(np.mean(frame <= 5)) for frame in frames),
         )
         reasons = []
