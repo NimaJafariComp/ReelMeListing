@@ -241,7 +241,7 @@ quality regression, and the candidate is not rejected by QA.
 Phase 7 exposes a localhost-only FastAPI service with durable SQLite job records, atomic worker claims,
 terminal failure state, retry, and SHA-256-tracked artifact downloads. The initial supported job is
 the deterministic `fixture_reel`, so the service can be validated without model inference. Bind it
-only to localhost; it requires an environment-only API key and intentionally has no multi-tenant isolation.
+only to localhost; it has no multi-tenant isolation.
 
 ```powershell
 uv run --extra dev uvicorn listing_to_reel.api.app:app --host 127.0.0.1 --port 8000
@@ -250,6 +250,25 @@ uv run --extra dev uvicorn listing_to_reel.api.app:app --host 127.0.0.1 --port 8
 The service is intentionally bound to `127.0.0.1` and has no local API key. Submit `POST /jobs` with `{"kind":"fixture_reel","source_paths":["/absolute/a.jpg","/absolute/b.jpg"]}`.
 Use `GET /jobs/{id}` for state, `POST /jobs/{id}/retry` after a failure, and
 `GET /jobs/{id}/artifacts` or `/jobs/{id}/artifacts/{name}` for the persisted lineage and download.
+
+### Start the local studio
+
+Docker is intentionally not the normal local launcher: the app needs direct access to Apple MPS or
+the NVIDIA GPU and to the native ComfyUI model checkout. The bundled React studio is served by the
+FastAPI process, so one command starts the normal app:
+
+```sh
+make run
+```
+
+On Apple Silicon, use the MPS-enabled image-editing dependencies:
+
+```sh
+make run-mps
+```
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). ComfyUI is still started separately, and only
+when rendering LTX clips on the CUDA workstation.
 
 ### Phase 7.5: browser reel builder
 
