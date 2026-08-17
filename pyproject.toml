@@ -11,6 +11,7 @@ requires-python = ">=3.12,<3.14"
 license = { text = "MIT" }
 authors = [{ name = "Listing-to-Reel contributors" }]
 dependencies = [
+  "fastapi>=0.115,<1",
   "numpy>=2.0,<3",
   "opencv-python-headless>=4.10,<5",
   "pydantic>=2.10,<3",
@@ -18,10 +19,12 @@ dependencies = [
   "PyYAML>=6.0,<7",
   "structlog>=24.4,<26",
   "typer>=0.15,<1",
+  "uvicorn>=0.34,<1",
 ]
 
 [project.optional-dependencies]
 dev = [
+  "httpx>=0.28,<1",
   "pytest>=8.3,<9",
   "ruff>=0.9,<1",
 ]
