@@ -208,6 +208,34 @@ uv run --no-sync python -m listing_to_reel video assemble-ltx `
   --accepted-clip 01-front-twilight
 ```
 
+## Phase 6: CUDA benchmark and optimization evidence
+
+Phase 6 records comparable, hardware-specific LTX measurements. Run the baseline and an optimized
+configuration on the same CUDA PC with the same source images, model revision, resolution, frame
+count, FPS, and bridge endpoints. Record actual stopwatch timings for the named stages; the command
+also captures the current CUDA device, live allocated/reserved VRAM, PyTorch/CUDA environment,
+render provenance, and linked QA result. M5 preview runs cannot be recorded as authoritative
+benchmarks.
+
+```powershell
+uv run --no-sync python -m listing_to_reel benchmark record-ltx `
+  --label baseline-8-step `
+  --cohort rtx-4070-super-cuda-12.6 `
+  --render-manifest runs/ltx-videos/<run-id>/manifest.json `
+  --quality-report runs/ltx-quality/<quality-id>/report.json `
+  --stage load=18.4 `
+  --stage generation=642.7 `
+  --stage qa=14.2
+
+uv run --no-sync python -m listing_to_reel benchmark compare-ltx `
+  --baseline runs/benchmarks/<baseline-id>/record.json `
+  --candidate runs/benchmarks/<candidate-id>/record.json
+```
+
+The comparison rejects mismatched source/model/delivery workloads, reports generation and total
+speedup plus VRAM delta, and accepts an optimization only when it is faster, has no measured
+quality regression, and the candidate is not rejected by QA.
+
 ## Local setup
 
 ```bash

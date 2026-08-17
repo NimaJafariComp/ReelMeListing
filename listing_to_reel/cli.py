@@ -6,6 +6,8 @@ from pathlib import Path
 import typer
 
 from listing_to_reel.analysis.input_quality import analyze_input_image, load_input_quality_config
+from listing_to_reel.benchmarking.models import BenchmarkStage
+from listing_to_reel.benchmarking.service import compare_ltx_benchmarks, record_ltx_benchmark
 from listing_to_reel.core.config import load_runtime_config
 from listing_to_reel.core.environment import collect_environment_snapshot
 from listing_to_reel.editing.instruct_pix2pix import InstructPix2PixEditor
@@ -62,6 +64,72 @@ def environment() -> None:
     """Print the current reproducibility environment snapshot."""
     snapshot = collect_environment_snapshot()
     typer.echo(snapshot.model_dump_json(indent=2))
+
+
+benchmark_app = typer.Typer(no_args_is_help=True, help="Phase 6 CUDA LTX benchmark commands.")
+app.add_typer(benchmark_app, name="benchmark")
+
+
+def _benchmark_stages(values: list[str]) -> list[BenchmarkStage]:
+    stages: list[BenchmarkStage] = []
+    for value in values:
+        name, separator, duration_text = value.partition("=")
+        if not name or not separator:
+            raise typer.BadParameter("Each --stage must be name=seconds.")
+        try:
+            stages.append(BenchmarkStage(name=name, duration_seconds=float(duration_text)))
+        except ValueError as error:
+            raise typer.BadParameter("Benchmark stage seconds must be numeric.") from error
+    return stages
+
+
+@benchmark_app.command("record-ltx")
+def benchmark_record_ltx(
+    label: str = typer.Option(..., "--label", min=1),
+    cohort: str = typer.Option(..., "--cohort", min=1),
+    render_manifest: Path = typer.Option(..., "--render-manifest", exists=True, readable=True),
+    quality_report: Path = typer.Option(..., "--quality-report", exists=True, readable=True),
+    stage: list[str] = typer.Option(
+        ...,
+        "--stage",
+        help="Measured stage as name=seconds; include generation, repeat for load/qa/assembly.",
+    ),
+    runtime_config: Path = typer.Option(
+        Path("configs/remote_cuda.yaml"), "--runtime-config", exists=True, readable=True
+    ),
+    profile: str = typer.Option("remote_cuda", "--profile"),
+    output_dir: Path = typer.Option(
+        Path("runs/benchmarks"), help="Ignored benchmark output directory."
+    ),
+) -> None:
+    """Record one hardware-specific LTX benchmark from measured stage timings."""
+    profiles = load_runtime_config(runtime_config).runtime_profiles
+    if profile not in profiles:
+        raise typer.BadParameter(f"Unknown runtime profile: {profile}")
+    record = record_ltx_benchmark(
+        label=label,
+        cohort=cohort,
+        render_manifest_path=render_manifest,
+        quality_report_path=quality_report,
+        runtime_profile_name=profile,
+        runtime_profile=profiles[profile],
+        stages=_benchmark_stages(stage),
+        output_dir=output_dir,
+    )
+    typer.echo(record.model_dump_json(indent=2))
+
+
+@benchmark_app.command("compare-ltx")
+def benchmark_compare_ltx(
+    baseline: Path = typer.Option(..., "--baseline", exists=True, readable=True),
+    candidate: Path = typer.Option(..., "--candidate", exists=True, readable=True),
+    output_dir: Path = typer.Option(
+        Path("runs/benchmarks"), help="Ignored comparison output directory."
+    ),
+) -> None:
+    """Compare two same-workload LTX benchmarks and emit an acceptance decision."""
+    comparison = compare_ltx_benchmarks(baseline, candidate, output_dir)
+    typer.echo(comparison.model_dump_json(indent=2))
 
 
 reel_app = typer.Typer(no_args_is_help=True, help="Deterministic reel assembly commands.")
