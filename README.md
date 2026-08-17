@@ -17,6 +17,22 @@ ReelMeListing helps developers and visual-media teams assemble short vertical pr
 
 The project does not certify that generated media is truthful. A human must review every delivery candidate. LTX bridges are synthetic architectural visualizations, not verified walkthroughs.
 
+## Synthetic property demo
+
+<p align="center">
+  <img src="docs/assets/synthetic-property-views.jpg" width="960" alt="Five related synthetic suburban-property views: front twilight, covered patio, front-left daylight, backyard patio, and front-wide daylight">
+</p>
+
+<p align="center"><sub>Tracked synthetic source set used to exercise the multi-view workflow.</sub></p>
+
+<p align="center">
+  <a href="artifacts/ltx-timed-reels/no-zoom-2026-08-16/reels/15s/reel.mp4">
+    <img src="docs/assets/synthetic-property-reel-preview.gif" width="270" alt="Animated five-second preview of the generated synthetic-property reel">
+  </a>
+</p>
+
+<p align="center"><sub>Animated preview from the tracked 15-second reel. Select it to open the MP4.</sub></p>
+
 ## What the project does
 
 The normal browser workflow is:
