@@ -344,4 +344,4 @@ Tracked LTX renders live under `artifacts/ltx-timed-reels/`. They are reference 
 
 ## License
 
-`pyproject.toml` declares the project as MIT-licensed. This repository does not currently include a top-level `LICENSE` file. Add the license text before distributing the project as an open-source package.
+ReelMeListing is available under the [MIT License](LICENSE).
