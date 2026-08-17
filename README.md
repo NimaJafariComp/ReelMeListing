@@ -238,25 +238,35 @@ quality regression, and the candidate is not rejected by QA.
 
 ## Phase 7: local job API and artifacts
 
-Phase 7 exposes an authenticated local FastAPI service with durable SQLite job records, atomic worker claims,
+Phase 7 exposes a localhost-only FastAPI service with durable SQLite job records, atomic worker claims,
 terminal failure state, retry, and SHA-256-tracked artifact downloads. The initial supported job is
 the deterministic `fixture_reel`, so the service can be validated without model inference. Bind it
 only to localhost; it requires an environment-only API key and intentionally has no multi-tenant isolation.
 
 ```powershell
-REELME_API_TOKEN="replace-with-a-long-random-secret" uv run --extra dev uvicorn listing_to_reel.api.app:app --host 127.0.0.1 --port 8000
+uv run --extra dev uvicorn listing_to_reel.api.app:app --host 127.0.0.1 --port 8000
 ```
 
-Send `X-API-Key: <REELME_API_TOKEN>` for every API request. Submit `POST /jobs` with `{"kind":"fixture_reel","source_paths":["/absolute/a.jpg","/absolute/b.jpg"]}`.
+The service is intentionally bound to `127.0.0.1` and has no local API key. Submit `POST /jobs` with `{"kind":"fixture_reel","source_paths":["/absolute/a.jpg","/absolute/b.jpg"]}`.
 Use `GET /jobs/{id}` for state, `POST /jobs/{id}/retry` after a failure, and
 `GET /jobs/{id}/artifacts` or `/jobs/{id}/artifacts/{name}` for the persisted lineage and download.
 
 ### Phase 7.5: browser reel builder
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000) after starting the local API. The browser app
-uploads 2–12 selected photos, lets you set the final reel length and dissolve duration, submits the
-API job, polls its state, plays the saved MP4, and provides a download link. This UI currently uses
-the deterministic reel job; LTX generation remains the explicit CUDA/ComfyUI workflow documented above.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) after starting the local API. The bundled React + TypeScript
+studio uploads 2–12 selected photos, labels each visible area and viewpoint, records user-selected
+compatible pairs for invented LTX bridges, offers 8–20 second delivery and 0.2–5 second dissolve controls,
+shows local runtime compatibility and per-image QA evidence, and submits local InstructPix2Pix image-edit
+jobs. Bridge selections are retained in job lineage; the current deterministic assembly uses intentional
+dissolves until the selected LTX bridge render is approved.
+
+For hot-reload frontend development:
+
+```powershell
+cd webapp
+npm install
+npm run dev
+```
 
 ## Phase 8: LoRA readiness gate
 

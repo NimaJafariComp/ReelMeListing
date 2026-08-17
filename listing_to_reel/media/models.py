@@ -16,8 +16,8 @@ class ReelSettings(BaseModel):
     width: int = Field(default=1080, ge=64, le=4096)
     height: int = Field(default=1920, ge=64, le=4096)
     fps: int = Field(default=30, ge=1, le=120)
-    target_duration_seconds: float = Field(default=12.0, ge=10.0, le=15.0)
-    transition_seconds: float = Field(default=0.5, gt=0.0, le=2.0)
+    target_duration_seconds: float = Field(default=12.0, ge=8.0, le=20.0)
+    transition_seconds: float = Field(default=0.5, gt=0.0, le=5.0)
     zoom_increment_per_frame: float = Field(default=0.0006, gt=0.0, le=0.01)
     zoom_max: float = Field(default=1.06, gt=1.0, le=1.25)
     crf: int = Field(default=20, ge=0, le=51)
@@ -29,7 +29,7 @@ class ReelRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    source_paths: list[Path] = Field(min_length=2, max_length=10)
+    source_paths: list[Path] = Field(min_length=2, max_length=12)
     output_dir: Path = Path("runs")
     settings: ReelSettings = Field(default_factory=ReelSettings)
 
