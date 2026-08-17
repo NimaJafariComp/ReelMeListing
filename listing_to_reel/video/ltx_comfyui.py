@@ -849,6 +849,7 @@ def plan_ltx_timed_reel(
     total_duration_seconds: float,
     bridge_duration_seconds: float | dict[str, float],
     output_dir: Path,
+    scene_fade_seconds: float = 0.45,
 ) -> LtxTimedReelPlan:
     """Allocate a delivery length across user-selected bridges and their follow-on shots."""
     manifest = LtxRenderManifest.model_validate_json(
@@ -856,6 +857,8 @@ def plan_ltx_timed_reel(
     )
     if not 8.0 <= total_duration_seconds <= 120.0:
         raise ValueError("Total reel duration must be between 8 and 120 seconds.")
+    if not 0.2 <= scene_fade_seconds <= 1.0:
+        raise ValueError("Cinematic scene fades must be between 0.2 and 1 second.")
     if isinstance(bridge_duration_seconds, dict):
         default_bridge_duration = 3.0
         bridge_duration_by_id = {
@@ -893,7 +896,15 @@ def plan_ltx_timed_reel(
     missing_clips = sorted(set(follow_on_names) - set(clips))
     if missing_clips:
         raise ValueError(f"Bridge follow-on source clip is missing: {', '.join(missing_clips)}")
-    shot_budget = total_duration_seconds - sum(bridge_duration_by_id.values())
+    scene_dissolve_count = sum(
+        previous.to_view != following.from_view
+        for previous, following in zip(selected_bridges, selected_bridges[1:])
+    )
+    shot_budget = (
+        total_duration_seconds
+        + scene_dissolve_count * scene_fade_seconds
+        - sum(bridge_duration_by_id.values())
+    )
     if shot_budget < 0.75 * len(follow_on_names):
         raise ValueError(
             "Requested duration leaves less than 0.75 seconds per follow-on shot. "
@@ -903,6 +914,12 @@ def plan_ltx_timed_reel(
     items: list[LtxTimedReelItem] = []
     for index, bridge in enumerate(selected_bridges):
         bridge_duration = bridge_duration_by_id[bridge.candidate_id]
+        if index == 0:
+            transition_before = "opening"
+        elif selected_bridges[index - 1].to_view == bridge.from_view:
+            transition_before = "continuous"
+        else:
+            transition_before = "cinematic_dissolve"
         items.append(
             LtxTimedReelItem(
                 kind="ltx_bridge",
@@ -911,7 +928,7 @@ def plan_ltx_timed_reel(
                 source_duration_seconds=bridge.video.duration_seconds,
                 delivery_duration_seconds=bridge_duration,
                 playback_speed=bridge.video.duration_seconds / bridge_duration,
-                transition_before="opening" if index == 0 else "intentional_cut",
+                transition_before=transition_before,
             )
         )
         clip = clips[bridge.to_view]
@@ -932,6 +949,7 @@ def plan_ltx_timed_reel(
             "bridges": bridge_candidate_ids,
             "total": total_duration_seconds,
             "bridge_durations": bridge_duration_by_id,
+            "scene_fade_seconds": scene_fade_seconds,
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -944,12 +962,14 @@ def plan_ltx_timed_reel(
         requested_total_duration_seconds=total_duration_seconds,
         requested_bridge_duration_seconds=default_bridge_duration,
         requested_bridge_duration_overrides=overrides,
+        scene_fade_seconds=scene_fade_seconds,
         items=items,
-        output_duration_seconds=sum(item.delivery_duration_seconds for item in items),
+        output_duration_seconds=total_duration_seconds,
         optimization_notes=[
             "Each compatible LTX bridge receives its user-selected duration.",
             "Remaining time is distributed evenly across bridge follow-on shots.",
-            "Unrelated areas use intentional cuts, never an invented spatial bridge.",
+            "Unrelated areas use cinematic dissolves, never an invented spatial bridge.",
+            f"Each unrelated scene dissolve is {scene_fade_seconds:g} seconds.",
             "Playback rates are recorded so delivery duration remains exact.",
             "Shorter remaining shot budgets intentionally make follow-on camera motion faster.",
         ],
@@ -978,7 +998,6 @@ def assemble_ltx_timed_reel(plan_path: Path, output_dir: Path) -> LtxTimedReelMa
     for item in plan.items:
         command.extend(["-i", item.input_path])
     filters: list[str] = []
-    timeline_labels: list[str] = []
     for index, item in enumerate(plan.items):
         filters.extend(
             [
@@ -987,14 +1006,32 @@ def assemble_ltx_timed_reel(plan_path: Path, output_dir: Path) -> LtxTimedReelMa
                 f"[bgraw{index}]scale=1080:1920:force_original_aspect_ratio=increase,"
                 f"crop=1080:1920,boxblur=20:10[bg{index}]",
                 f"[fgraw{index}]scale=1080:608:force_original_aspect_ratio=decrease[fg{index}]",
-                f"[bg{index}][fg{index}]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v{index}]",
+                f"[bg{index}][fg{index}]overlay=(W-w)/2:(H-h)/2,format=yuv420p,"
+                f"fps=30,settb=AVTB,setpts=PTS-STARTPTS[v{index}]",
             ]
         )
-        timeline_labels.append(f"[v{index}]")
+    current_label = "v0"
+    current_duration = plan.items[0].delivery_duration_seconds
+    for index, item in enumerate(plan.items[1:], start=1):
+        output_label = f"timeline{index}"
+        if item.transition_before == "cinematic_dissolve":
+            fade_seconds = min(
+                plan.scene_fade_seconds,
+                current_duration - 0.01,
+                item.delivery_duration_seconds - 0.01,
+            )
+            filters.append(
+                f"[{current_label}][v{index}]xfade=transition=fade:duration={fade_seconds:.6f}:"
+                f"offset={current_duration - fade_seconds:.6f}[{output_label}]"
+            )
+            current_duration += item.delivery_duration_seconds - fade_seconds
+        else:
+            filters.append(f"[{current_label}][v{index}]concat=n=2:v=1:a=0[{output_label}]")
+            current_duration += item.delivery_duration_seconds
+        current_label = output_label
     output_frames = round(plan.output_duration_seconds * 30)
     filters.append(
-        f"{''.join(timeline_labels)}concat=n={len(plan.items)}:v=1:a=0,"
-        f"fps=30,trim=end_frame={output_frames},setpts=PTS-STARTPTS[video]"
+        f"[{current_label}]fps=30,trim=end_frame={output_frames},setpts=PTS-STARTPTS[video]"
     )
     command.extend(
         [

@@ -117,7 +117,7 @@ uv run --no-sync python -m listing_to_reel video qa-ltx `
 
 Choose the total delivery length and desired invented-bridge duration. The timed planner gives
 each selected compatible LTX bridge that duration, distributes all remaining time evenly across
-its follow-on source views, records the resulting playback speeds, and uses intentional cuts
+its follow-on source views, records the resulting playback speeds, and uses cinematic dissolves
 between unrelated areas. For example, this requests a 20-second reel with three-second bridges:
 
 ```powershell
@@ -125,6 +125,7 @@ uv run --no-sync python -m listing_to_reel video plan-ltx-reel `
   --render-manifest runs/ltx-videos/<run-id>/manifest.json `
   --total-seconds 20 `
   --bridge-seconds 3 `
+  --scene-fade-seconds 0.45 `
   --bridge front-left-to-front-wide `
   --bridge patio-to-backyard `
   --bridge front-day-to-twilight
@@ -146,8 +147,9 @@ uv run --no-sync python -m listing_to_reel video plan-ltx-reel `
 ```
 
 Bridge duration must be 2–6 seconds. Select only pairs with compatible visual overlap; a
-front-to-backyard or otherwise unrelated change is planned as a deliberate cut, not an invented
-camera move.
+front-to-backyard or otherwise unrelated change is planned as a 0.2–1.0 second cinematic
+cross-dissolve, not an invented camera move. The fade duration is included in the requested final
+reel length.
 
 Render that saved plan—not merely source clips—into the final bridge-and-clip timeline:
 

@@ -1,0 +1,75 @@
+{
+  "phase": "phase_5_ltx_timed_reel_plan",
+  "run_id": "ltx-timed-reel-9e8f63cf5bc60167",
+  "created_at": "2026-08-17T04:27:51.648239Z",
+  "render_manifest_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\manifest.json",
+  "requested_total_duration_seconds": 20.0,
+  "requested_bridge_duration_seconds": 3.0,
+  "requested_bridge_duration_overrides": {},
+  "scene_fade_seconds": 0.45,
+  "items": [
+    {
+      "kind": "ltx_bridge",
+      "name": "front-left-to-front-wide",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-left-to-front-wide_00001_.webm",
+      "source_duration_seconds": 5.1,
+      "delivery_duration_seconds": 3.0,
+      "playback_speed": 1.7,
+      "transition_before": "opening"
+    },
+    {
+      "kind": "source_clip",
+      "name": "05-front-day-wide",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\05-front-day-wide_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.9666666666666663,
+      "playback_speed": 0.7477310924369749,
+      "transition_before": "continuous"
+    },
+    {
+      "kind": "ltx_bridge",
+      "name": "patio-to-backyard",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\patio-to-backyard_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.0,
+      "playback_speed": 0.9886666666666667,
+      "transition_before": "cinematic_dissolve"
+    },
+    {
+      "kind": "source_clip",
+      "name": "04-backyard-patio",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\04-backyard-patio_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.9666666666666663,
+      "playback_speed": 0.7477310924369749,
+      "transition_before": "continuous"
+    },
+    {
+      "kind": "ltx_bridge",
+      "name": "front-day-to-twilight",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-day-to-twilight_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.0,
+      "playback_speed": 0.9886666666666667,
+      "transition_before": "cinematic_dissolve"
+    },
+    {
+      "kind": "source_clip",
+      "name": "01-front-twilight",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\01-front-twilight_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.9666666666666663,
+      "playback_speed": 0.7477310924369749,
+      "transition_before": "continuous"
+    }
+  ],
+  "output_duration_seconds": 20.0,
+  "optimization_notes": [
+    "Each compatible LTX bridge receives its user-selected duration.",
+    "Remaining time is distributed evenly across bridge follow-on shots.",
+    "Unrelated areas use cinematic dissolves, never an invented spatial bridge.",
+    "Each unrelated scene dissolve is 0.45 seconds.",
+    "Playback rates are recorded so delivery duration remains exact.",
+    "Shorter remaining shot budgets intentionally make follow-on camera motion faster."
+  ]
+}

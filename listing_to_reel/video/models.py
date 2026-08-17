@@ -397,7 +397,9 @@ class LtxTimedReelItem(BaseModel):
     source_duration_seconds: float = Field(gt=0)
     delivery_duration_seconds: float = Field(gt=0)
     playback_speed: float = Field(gt=0)
-    transition_before: Literal["opening", "continuous", "intentional_cut"]
+    transition_before: Literal[
+        "opening", "continuous", "cinematic_dissolve", "intentional_cut"
+    ]
 
 
 class LtxTimedReelPlan(BaseModel):
@@ -408,6 +410,7 @@ class LtxTimedReelPlan(BaseModel):
     requested_total_duration_seconds: float = Field(ge=8.0, le=120.0)
     requested_bridge_duration_seconds: float = Field(ge=2.0, le=6.0)
     requested_bridge_duration_overrides: dict[str, float] = Field(default_factory=dict)
+    scene_fade_seconds: float = Field(default=0.45, gt=0, le=1.0)
     items: list[LtxTimedReelItem] = Field(min_length=2)
     output_duration_seconds: float = Field(gt=0)
     optimization_notes: list[str]

@@ -1,0 +1,73 @@
+{
+  "phase": "phase_5_ltx_timed_reel_assembly",
+  "run_id": "ltx-timed-render-e11231e535b34331",
+  "created_at": "2026-08-17T04:28:46.815954Z",
+  "plan_path": "runs\\ltx-timed-reels\\ltx-timed-reel-9e8f63cf5bc60167\\plan.json",
+  "items": [
+    {
+      "kind": "ltx_bridge",
+      "name": "front-left-to-front-wide",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-left-to-front-wide_00001_.webm",
+      "source_duration_seconds": 5.1,
+      "delivery_duration_seconds": 3.0,
+      "playback_speed": 1.7,
+      "transition_before": "opening"
+    },
+    {
+      "kind": "source_clip",
+      "name": "05-front-day-wide",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\05-front-day-wide_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.9666666666666663,
+      "playback_speed": 0.7477310924369749,
+      "transition_before": "continuous"
+    },
+    {
+      "kind": "ltx_bridge",
+      "name": "patio-to-backyard",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\patio-to-backyard_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.0,
+      "playback_speed": 0.9886666666666667,
+      "transition_before": "cinematic_dissolve"
+    },
+    {
+      "kind": "source_clip",
+      "name": "04-backyard-patio",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\04-backyard-patio_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.9666666666666663,
+      "playback_speed": 0.7477310924369749,
+      "transition_before": "continuous"
+    },
+    {
+      "kind": "ltx_bridge",
+      "name": "front-day-to-twilight",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-day-to-twilight_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.0,
+      "playback_speed": 0.9886666666666667,
+      "transition_before": "cinematic_dissolve"
+    },
+    {
+      "kind": "source_clip",
+      "name": "01-front-twilight",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\01-front-twilight_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.9666666666666663,
+      "playback_speed": 0.7477310924369749,
+      "transition_before": "continuous"
+    }
+  ],
+  "output_path": "runs\\ltx-timed-reels\\ltx-timed-render-e11231e535b34331\\reel.mp4",
+  "output_sha256": "feab4b15fad57f647c45e2920ef937ae8c4bbd4b3e25a4238deab817f1b1c591",
+  "video": {
+    "codec_name": "h264",
+    "width": 1080,
+    "height": 1920,
+    "pixel_format": "yuv420p",
+    "frame_rate": "30/1",
+    "duration_seconds": 20.0
+  },
+  "foreground_treatment": "Complete native 16:9 landscape foreground centered over a blurred portrait background; foreground property is never cropped."
+}

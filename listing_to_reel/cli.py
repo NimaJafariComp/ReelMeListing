@@ -361,6 +361,13 @@ def plan_ltx_reel(
         "--bridge-duration",
         help="Optional per-bridge override as candidate=seconds; valid range: 2–6 seconds.",
     ),
+    scene_fade_seconds: float = typer.Option(
+        0.45,
+        "--scene-fade-seconds",
+        min=0.2,
+        max=1.0,
+        help="Cinematic cross-dissolve length between unrelated property areas.",
+    ),
     bridge: list[str] = typer.Option(
         ...,
         "--bridge",
@@ -395,6 +402,7 @@ def plan_ltx_reel(
         total_seconds,
         duration_overrides or bridge_seconds,
         output_dir,
+        scene_fade_seconds,
     )
     typer.echo(plan.model_dump_json(indent=2))
 
