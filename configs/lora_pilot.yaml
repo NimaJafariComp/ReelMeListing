@@ -1,0 +1,15 @@
+lora_pilot:
+  provider: diffusers
+  adapter: instruct_pix2pix_lora
+  base_model_id: timbrooks/instruct-pix2pix
+  base_model_revision: null
+  base_model_frozen: true
+  target: image_editing_adapter_only
+  resolution: 512
+  rank: 16
+  alpha: 16
+  learning_rate: 0.0001
+  max_train_steps: 1200
+  train_batch_size: 1
+  gradient_accumulation_steps: 4
+  seed: 42

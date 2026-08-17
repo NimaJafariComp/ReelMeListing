@@ -25,6 +25,8 @@ from pydantic import BaseModel, Field
 
 from listing_to_reel.core.config import load_runtime_config
 from listing_to_reel.core.environment import collect_environment_snapshot
+from listing_to_reel.finetuning.models import LoRAReadinessReport, LoRAReadinessRequest
+from listing_to_reel.finetuning.service import assess_lora_readiness
 from listing_to_reel.media.models import ReelRequest, ReelSettings
 from listing_to_reel.media.reel import assemble_reel
 
@@ -273,6 +275,13 @@ def create_app(
                     ),
                 }
         return {"environment": snapshot.model_dump(mode="json"), "profiles": profiles}
+
+    @app.post("/lora/readiness", response_model=LoRAReadinessReport)
+    def lora_readiness(
+        request: LoRAReadinessRequest, _: None = Depends(authorize)
+    ) -> LoRAReadinessReport:
+        """Assess a Phase 8 dataset; training remains an explicit CUDA-only operation."""
+        return assess_lora_readiness(request)
 
     @app.post("/uploads")
     async def upload(

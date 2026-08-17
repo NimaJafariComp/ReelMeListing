@@ -18,6 +18,12 @@ from listing_to_reel.evaluation.service import (
     import_human_review,
     load_evaluation_config,
 )
+from listing_to_reel.finetuning.models import (
+    LoRADatasetManifest,
+    LoRAReadinessRequest,
+    ReadinessEvidence,
+)
+from listing_to_reel.finetuning.service import assess_lora_readiness, load_lora_pilot_config
 from listing_to_reel.media.models import ReelRequest
 from listing_to_reel.media.reel import assemble_reel
 from listing_to_reel.video.ltx_comfyui import (
@@ -50,6 +56,36 @@ from listing_to_reel.video.service import (
 )
 
 app = typer.Typer(no_args_is_help=True, help="Listing-to-Reel development commands.")
+
+
+lora_app = typer.Typer(no_args_is_help=True, help="Phase 8 image-editing LoRA readiness commands.")
+app.add_typer(lora_app, name="lora")
+
+
+@lora_app.command("assess")
+def assess_lora(
+    dataset_manifest: Path = typer.Option(..., "--dataset-manifest", exists=True, readable=True),
+    evidence: Path = typer.Option(..., "--evidence", exists=True, readable=True),
+    config: Path = typer.Option(
+        Path("configs/lora_pilot.yaml"), "--config", exists=True, readable=True
+    ),
+    output_dir: Path = typer.Option(Path("runs/lora-readiness"), "--output-dir"),
+) -> None:
+    """Assess whether a licensed paired dataset justifies one frozen-base LoRA pilot."""
+    dataset = LoRADatasetManifest.model_validate_json(dataset_manifest.read_text(encoding="utf-8"))
+    readiness_evidence = ReadinessEvidence.model_validate_json(evidence.read_text(encoding="utf-8"))
+    report = assess_lora_readiness(
+        LoRAReadinessRequest(
+            dataset=dataset,
+            evidence=readiness_evidence,
+            configuration=load_lora_pilot_config(config),
+        )
+    )
+    run_dir = output_dir / report.report_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    report_path = run_dir / "report.json"
+    report_path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+    typer.echo(report.model_dump_json(indent=2))
 
 
 @app.command("config-check")

@@ -258,6 +258,50 @@ uploads 2–12 selected photos, lets you set the final reel length and dissolve 
 API job, polls its state, plays the saved MP4, and provides a download link. This UI currently uses
 the deterministic reel job; LTX generation remains the explicit CUDA/ComfyUI workflow documented above.
 
+## Phase 8: LoRA readiness gate
+
+Phase 8 does **not** train by default. It determines whether one narrow, frozen-base
+InstructPix2Pix LoRA experiment is justified for natural exterior day-to-dusk conversion. Training
+is blocked unless all of the following are present:
+
+- licensed assets with derivative, training, and portfolio rights recorded per image;
+- same-property, same-camera-view daylight-to-dusk pairs whose geometry was verified;
+- train, validation, and held-out test splits grouped by property, with no property in more than one split;
+- recorded geometry-gate, structure-conditioning comparison, reproducible video-QA, and baseline-comparison evidence.
+
+The LoRA pilot configuration is versioned in `configs/lora_pilot.yaml`. It freezes the base model,
+trains only the image-editing adapter, and never trains a video model.
+
+Create two local JSON files: a dataset manifest and an evidence manifest. A dataset manifest has
+`assets` (each with `asset_id`, `listing_group_id`, `split`, `role`, `source_uri`, `rights_basis`,
+`rights_evidence_ref`, and the three permission booleans) plus `pairs` (each with `pair_id`,
+`source_asset_id`, `target_asset_id`, `same_camera_view`, and `geometry_verified`). Roles must be
+`daylight_source` and `dusk_target`; splits must be `train`, `validation`, or `test`. The evidence
+manifest contains these four report references:
+
+```json
+{
+  "geometry_gate_report": "runs/evaluations/geometry.json",
+  "structure_conditioning_comparison": "runs/evaluations/controlnet-comparison.json",
+  "reproducible_video_qa_report": "runs/ltx-quality/report.json",
+  "baseline_comparison_report": "runs/evaluations/baseline-comparison.json"
+}
+```
+
+Run the assessment locally:
+
+```powershell
+uv run --no-sync python -m listing_to_reel lora assess `
+  --dataset-manifest path/to/licensed-pairs.json `
+  --evidence path/to/training-evidence.json
+```
+
+It writes an ignored `runs/lora-readiness/<run-id>/report.json` with either
+`training_permitted` or `not_justified` and precise reason codes. The browser builder exposes the
+same authenticated readiness check: choose the two JSON files in **Check training readiness**.
+It deliberately does not expose a Train button; a CUDA training invocation is authorized only after
+this gate returns `training_permitted` and the resulting held-out evaluation plan is reviewed.
+
 ## Local setup
 
 ```bash
