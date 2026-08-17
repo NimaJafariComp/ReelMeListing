@@ -18,9 +18,18 @@ from listing_to_reel.evaluation.service import (
 )
 from listing_to_reel.media.models import ReelRequest
 from listing_to_reel.media.reel import assemble_reel
+from listing_to_reel.video.ltx_comfyui import (
+    assemble_ltx_portrait_reel,
+    evaluate_ltx_render,
+    load_ltx_comfyui_config,
+    render_ltx_views,
+)
 from listing_to_reel.video.models import (
     HeroVideoRequest,
     InterpolationConfig,
+    LtxMotionTreatment,
+    LtxRenderRequest,
+    LtxSourceView,
     MultiShotInput,
     MultiShotVideoRequest,
     PropertyShotRole,
@@ -200,6 +209,82 @@ def plan_ltx_multishot(
         output_dir=output_dir,
     )
     manifest = plan_multishot_ltx_video(request)
+    typer.echo(manifest.model_dump_json(indent=2))
+
+
+@video_app.command("render-ltx")
+def render_ltx(
+    property_id: str = typer.Option(..., "--property-id", min=1),
+    source: list[str] = typer.Option(
+        ...,
+        "--source",
+        help=(
+            "View as name=path,to_treatment; treatment is "
+            "slow_lateral_gimbal_glide or gentle_dolly_in."
+        ),
+    ),
+    config: Path = typer.Option(
+        Path("configs/ltx_comfyui.yaml"), "--config", exists=True, readable=True
+    ),
+    output_dir: Path = typer.Option(
+        Path("runs/ltx-videos"), help="Ignored LTX candidate output directory."
+    ),
+) -> None:
+    """Render native-16:9 LTX source-anchored clips through ComfyUI only."""
+    source_views = []
+    for value in source:
+        name, separator, remainder = value.partition("=")
+        path_text, treatment_separator, treatment_text = remainder.rpartition(",")
+        if not separator or not treatment_separator or not name or not path_text:
+            raise typer.BadParameter("Each --source must be name=path,to_treatment.")
+        try:
+            source_views.append(
+                LtxSourceView(
+                    name=name,
+                    source_path=Path(path_text),
+                    treatment=LtxMotionTreatment(treatment_text),
+                )
+            )
+        except ValueError as error:
+            choices = ", ".join(item.value for item in LtxMotionTreatment)
+            raise typer.BadParameter(f"Unknown LTX treatment; use one of: {choices}.") from error
+    manifest = render_ltx_views(
+        LtxRenderRequest(
+            property_id=property_id,
+            source_views=source_views,
+            configuration=load_ltx_comfyui_config(config),
+            output_dir=output_dir,
+        )
+    )
+    typer.echo(manifest.model_dump_json(indent=2))
+
+
+@video_app.command("qa-ltx")
+def qa_ltx(
+    render_manifest: Path = typer.Option(..., "--render-manifest", exists=True, readable=True),
+    output_dir: Path = typer.Option(
+        Path("runs/ltx-quality"), help="Ignored LTX QA report directory."
+    ),
+) -> None:
+    """Perform structural/temporal screening and export a mandatory human-review worksheet."""
+    report = evaluate_ltx_render(render_manifest, output_dir)
+    typer.echo(report.model_dump_json(indent=2))
+
+
+@video_app.command("assemble-ltx")
+def assemble_ltx(
+    render_manifest: Path = typer.Option(..., "--render-manifest", exists=True, readable=True),
+    accepted_clip: list[str] = typer.Option(
+        ...,
+        "--accepted-clip",
+        help="Human-approved clip name from the LTX render manifest; repeat in edit order.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("runs/ltx-reels"), help="Ignored portrait delivery output directory."
+    ),
+) -> None:
+    """Create a portrait reel from explicitly human-approved landscape candidates only."""
+    manifest = assemble_ltx_portrait_reel(render_manifest, accepted_clip, output_dir)
     typer.echo(manifest.model_dump_json(indent=2))
 
 

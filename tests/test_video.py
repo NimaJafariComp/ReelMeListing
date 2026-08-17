@@ -2,6 +2,8 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
+import cv2
+import numpy as np
 from PIL import Image, ImageDraw
 
 from listing_to_reel.core.config import RuntimeProfile
@@ -14,9 +16,18 @@ from listing_to_reel.evaluation.models import (
     FinalDecisionRecord,
     RunDecision,
 )
+from listing_to_reel.video.ltx_comfyui import (
+    assemble_ltx_portrait_reel,
+    evaluate_ltx_render,
+    render_ltx_views,
+)
 from listing_to_reel.video.models import (
     HeroVideoRequest,
     InterpolationConfig,
+    LtxComfyUiConfig,
+    LtxMotionTreatment,
+    LtxRenderRequest,
+    LtxSourceView,
     MultiShotInput,
     MultiShotVideoRequest,
     PropertyShotRole,
@@ -46,6 +57,24 @@ class FakeVideoGenerator:
             frame.save(path)
             frames.append(path)
         return "deadbeef", frames
+
+
+class FakeComfyUiClient:
+    def __init__(self, output_dir: Path) -> None:
+        self.output_dir = output_dir
+        self.workflows: list[dict[str, object]] = []
+
+    def submit_and_wait(self, workflow: dict[str, object]) -> Path:
+        self.workflows.append(workflow)
+        path = self.output_dir / f"clip-{len(self.workflows)}.mp4"
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), 30, (1024, 576))
+        frame = np.full((576, 1024, 3), (130, 176, 216), dtype=np.uint8)
+        cv2.rectangle(frame, (200, 180), (820, 520), (45, 45, 45), 8)
+        for _ in range(89):
+            writer.write(frame)
+        writer.release()
+        return path
 
 
 def _approved_decision(tmp_path: Path, color: str = "#d8b084") -> Path:
@@ -200,3 +229,48 @@ def test_multishot_ltx_plan_requires_approved_distinct_views(tmp_path: Path) -> 
     assert plan.total_duration_seconds == 8.0
     assert len(plan.source_coverage) == 4
     assert (tmp_path / "plans" / plan.run_id / "manifest.json").is_file()
+
+
+def test_mocked_comfyui_ltx_render_and_human_review_qa(tmp_path: Path) -> None:
+    source = tmp_path / "source.png"
+    image = Image.new("RGB", (320, 180), "#d8b084")
+    ImageDraw.Draw(image).rectangle((60, 40, 260, 170), outline="black", width=5)
+    image.save(source)
+    comfy_root = tmp_path / "comfy"
+    client = FakeComfyUiClient(comfy_root / "output")
+    request = LtxRenderRequest(
+        property_id="synthetic-simple-suburban-home",
+        source_views=[
+            LtxSourceView(
+                name="front-wide",
+                source_path=source,
+                treatment=LtxMotionTreatment.LATERAL_GIMBAL,
+            )
+        ],
+        configuration=LtxComfyUiConfig(
+            comfyui_root=comfy_root,
+            model_revision="test-revision",
+        ),
+        output_dir=tmp_path / "runs",
+    )
+
+    manifest = render_ltx_views(request, client)
+    report = evaluate_ltx_render(
+        request.output_dir / manifest.run_id / "manifest.json", tmp_path / "quality"
+    )
+    reel = assemble_ltx_portrait_reel(
+        request.output_dir / manifest.run_id / "manifest.json",
+        ["front-wide"],
+        tmp_path / "reels",
+    )
+
+    assert manifest.generator == "comfyui_ltx_video_only"
+    assert manifest.clips[0].video.width == 1024
+    assert manifest.clips[0].video.height == 576
+    assert manifest.clips[0].decision.value == "queued_for_human_review"
+    assert client.workflows[0]["7"]["inputs"]["width"] == 1024
+    assert client.workflows[0]["7"]["inputs"]["height"] == 576
+    assert report.decision.value in {"queued_for_human_review", "rejected"}
+    assert Path(report.review_worksheet_path).is_file()
+    assert reel.video.width == 1080
+    assert reel.video.height == 1920

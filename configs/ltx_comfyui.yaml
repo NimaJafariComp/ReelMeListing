@@ -1,0 +1,14 @@
+# Update comfyui_root for the CUDA workstation.  These match the verified
+# native ComfyUI LTX nodes and matching VAE; no custom LTX node is required.
+endpoint: http://127.0.0.1:8188
+comfyui_root: work/ltx-comfyui/ComfyUI
+model_revision: ltx-video-2b-0.9.8-distilled-fp8
+checkpoint: ltxv-2b-0.9.8-distilled-fp8.safetensors
+text_encoder: text_encoders\t5xxl_fp8_e4m3fn.safetensors
+vae: vae\LTXV-13B-0.9.8-dev-VAE.safetensors
+width: 1024
+height: 576
+frames: 89
+fps: 30
+steps: 8
+seed: 1

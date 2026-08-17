@@ -77,7 +77,7 @@ uv run python -m listing_to_reel evaluate import-review \
   --worksheet runs/evaluations/quality-5cd62bdaf68072ca/review.csv
 ```
 
-## LTX multi-shot video foundation
+## LTX / ComfyUI multi-shot video
 
 Phase 5 is moving to LTX image-to-video through ComfyUI on the CUDA PC. The final reel will be made from four to six independently generated, source-anchored shots of **one property**—never an invented camera flight between unrelated views.
 
@@ -92,7 +92,40 @@ uv run python -m listing_to_reel video plan-ltx-multishot \
   --shot closing_hero=runs/evaluations/hero/final-decision.json
 ```
 
-The planner does not render a video. LTX/ComfyUI rendering will be added when we have four to six approved images of the same property to validate it against.
+The planner creates an auditable shot plan. Rendering uses **ComfyUI/LTX only** and generates
+native 16:9 landscape candidates; it never crops the foreground property to fill portrait.
+Set `comfyui_root` in `configs/ltx_comfyui.yaml` to the local ComfyUI checkout, start ComfyUI,
+then render the source-anchored candidates:
+
+```powershell
+uv run --no-sync python -m listing_to_reel video render-ltx `
+  --property-id synthetic-simple-suburban-home `
+  --source 03-front-day-left=data/source/synthetic_simple_suburban_home/03-front-day-left.png,slow_lateral_gimbal_glide `
+  --source 05-front-day-wide=data/source/synthetic_simple_suburban_home/05-front-day-wide.png,gentle_dolly_in `
+  --source 02-covered-patio=data/source/synthetic_simple_suburban_home/02-covered-patio.png,slow_lateral_gimbal_glide `
+  --source 04-backyard-patio=data/source/synthetic_simple_suburban_home/04-backyard-patio.png,gentle_dolly_in `
+  --source 01-front-twilight=data/source/synthetic_simple_suburban_home/01-front-twilight.png,slow_lateral_gimbal_glide
+
+uv run --no-sync python -m listing_to_reel video qa-ltx `
+  --render-manifest runs/ltx-videos/<run-id>/manifest.json
+```
+
+The render manifest records the exact ComfyUI node graph, pinned model/encoder/VAE names,
+prompt, source hashes, coverage, output hashes, and generated clips. QA writes a mandatory
+human-review worksheet for every clip and for the spatial/lighting bridge candidates. Nothing is
+auto-accepted: reject a bridge if geometry changes; use clean cuts for unrelated views. The final
+portrait editor retains the complete landscape foreground over a blurred background fill. After
+recording human approval, assemble only the names that were approved, in edit order:
+
+```powershell
+uv run --no-sync python -m listing_to_reel video assemble-ltx `
+  --render-manifest runs/ltx-videos/<run-id>/manifest.json `
+  --accepted-clip 03-front-day-left `
+  --accepted-clip 05-front-day-wide `
+  --accepted-clip 02-covered-patio `
+  --accepted-clip 04-backyard-patio `
+  --accepted-clip 01-front-twilight
+```
 
 ## Local setup
 

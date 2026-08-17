@@ -207,3 +207,145 @@ class VideoQualityReport(BaseModel):
     reason_codes: list[str]
     decision: VideoDecision
     review_worksheet_path: str | None = None
+
+
+class LtxMotionTreatment(StrEnum):
+    LATERAL_GIMBAL = "slow_lateral_gimbal_glide"
+    DOLLY_IN = "gentle_dolly_in"
+
+
+class LtxComfyUiConfig(BaseModel):
+    """Pinned native-landscape LTX/ComfyUI settings for the CUDA renderer."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = "http://127.0.0.1:8188"
+    comfyui_root: Path
+    model_revision: str
+    checkpoint: str = "ltxv-2b-0.9.8-distilled-fp8.safetensors"
+    text_encoder: str = "text_encoders\\t5xxl_fp8_e4m3fn.safetensors"
+    vae: str = "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+    width: int = Field(default=1024, ge=256, multiple_of=32)
+    height: int = Field(default=576, ge=256, multiple_of=32)
+    frames: int = Field(default=89, ge=17)
+    fps: int = Field(default=30, ge=24, le=60)
+    steps: int = Field(default=8, ge=1, le=30)
+    seed: int = Field(default=1, ge=0)
+
+    @model_validator(mode="after")
+    def validate_native_landscape(self) -> LtxComfyUiConfig:
+        if self.width * 9 != self.height * 16:
+            raise ValueError("LTX source clips must use native 16:9 landscape framing.")
+        if (self.frames - 1) % 8:
+            raise ValueError("LTX frame count must be 8n+1.")
+        return self
+
+    @property
+    def duration_seconds(self) -> float:
+        return self.frames / self.fps
+
+
+class LtxSourceView(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1)
+    source_path: Path
+    treatment: LtxMotionTreatment
+
+
+class LtxRenderRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    property_id: str = Field(min_length=1)
+    source_views: list[LtxSourceView] = Field(min_length=1, max_length=6)
+    configuration: LtxComfyUiConfig
+    output_dir: Path = Path("runs/ltx-videos")
+
+    @model_validator(mode="after")
+    def validate_distinct_source_views(self) -> LtxRenderRequest:
+        paths = [view.source_path for view in self.source_views]
+        if len(set(paths)) != len(paths):
+            raise ValueError("Each LTX source view must be distinct.")
+        return self
+
+
+class LtxGeneratedClip(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    source_path: str
+    source_sha256: str
+    source_coverage: str
+    treatment: LtxMotionTreatment
+    prompt: str
+    workflow: dict[str, object]
+    generated_path: str
+    generated_sha256: str
+    video: VideoMetadata
+    decision: VideoDecision = VideoDecision.QUEUED_FOR_HUMAN_REVIEW
+
+
+class LtxBridgeKind(StrEnum):
+    SPATIAL = "spatial_overlap"
+    LIGHTING_ONLY = "lighting_only"
+
+
+class LtxBridgeCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    candidate_id: str
+    kind: LtxBridgeKind
+    from_view: str
+    to_view: str
+    duration_seconds: float = Field(ge=0.5, le=1.0)
+    prompt: str
+    decision: VideoDecision = VideoDecision.QUEUED_FOR_HUMAN_REVIEW
+    reason: str
+
+
+class LtxRenderManifest(BaseModel):
+    run_id: str
+    phase: str = "phase_5_ltx_comfyui_render"
+    created_at: datetime
+    property_id: str
+    generator: str = "comfyui_ltx_video_only"
+    configuration: LtxComfyUiConfig
+    clips: list[LtxGeneratedClip]
+    bridge_candidates: list[LtxBridgeCandidate]
+    source_coverage: dict[str, str]
+    qa_status: VideoDecision = VideoDecision.QUEUED_FOR_HUMAN_REVIEW
+
+
+class LtxClipQualityReport(BaseModel):
+    name: str
+    generated_path: str
+    metrics: TemporalMetrics
+    reason_codes: list[str]
+    decision: VideoDecision
+
+
+class LtxQualityReport(BaseModel):
+    report_id: str
+    phase: str = "phase_5_ltx_comfyui_qa"
+    created_at: datetime
+    render_manifest_path: str
+    clips: list[LtxClipQualityReport]
+    bridge_candidates: list[LtxBridgeCandidate]
+    decision: VideoDecision
+    review_worksheet_path: str
+
+
+class LtxReelManifest(BaseModel):
+    run_id: str
+    phase: str = "phase_5_ltx_portrait_assembly"
+    created_at: datetime
+    render_manifest_path: str
+    accepted_clip_names: list[str]
+    source_coverage: dict[str, str]
+    output_path: str
+    output_sha256: str
+    video: VideoMetadata
+    foreground_treatment: str = (
+        "Complete native 16:9 landscape foreground centered over a blurred portrait background; "
+        "foreground property is never cropped."
+    )
