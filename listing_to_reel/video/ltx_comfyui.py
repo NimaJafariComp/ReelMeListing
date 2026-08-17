@@ -34,6 +34,8 @@ from listing_to_reel.video.models import (
     LtxReelManifest,
     LtxRenderManifest,
     LtxRenderRequest,
+    LtxTimedReelItem,
+    LtxTimedReelPlan,
     TemporalMetrics,
     VideoDecision,
 )
@@ -821,3 +823,99 @@ def assemble_ltx_portrait_reel(
     )
     (run_dir / "manifest.json").write_text(reel.model_dump_json(indent=2), encoding="utf-8")
     return reel
+
+
+def plan_ltx_timed_reel(
+    render_manifest_path: Path,
+    bridge_candidate_ids: list[str],
+    total_duration_seconds: float,
+    bridge_duration_seconds: float,
+    output_dir: Path,
+) -> LtxTimedReelPlan:
+    """Allocate a delivery length across user-selected bridges and their follow-on shots."""
+    manifest = LtxRenderManifest.model_validate_json(
+        render_manifest_path.read_text(encoding="utf-8")
+    )
+    if not 8.0 <= total_duration_seconds <= 120.0:
+        raise ValueError("Total reel duration must be between 8 and 120 seconds.")
+    if not 2.0 <= bridge_duration_seconds <= 4.0:
+        raise ValueError("Each requested bridge duration must be between 2 and 4 seconds.")
+    if not bridge_candidate_ids:
+        raise ValueError("Select at least one compatible LTX bridge.")
+    if len(set(bridge_candidate_ids)) != len(bridge_candidate_ids):
+        raise ValueError("Selected LTX bridges must be distinct.")
+    bridges = {bridge.candidate_id: bridge for bridge in manifest.bridges}
+    missing = sorted(set(bridge_candidate_ids) - set(bridges))
+    if missing:
+        raise ValueError(
+            "Requested LTX bridge output is missing: "
+            f"{', '.join(missing)}. Render it with --bridge-candidate first."
+        )
+    clips = {clip.name: clip for clip in manifest.clips}
+    selected_bridges = [bridges[candidate_id] for candidate_id in bridge_candidate_ids]
+    follow_on_names = [bridge.to_view for bridge in selected_bridges]
+    missing_clips = sorted(set(follow_on_names) - set(clips))
+    if missing_clips:
+        raise ValueError(f"Bridge follow-on source clip is missing: {', '.join(missing_clips)}")
+    shot_budget = total_duration_seconds - bridge_duration_seconds * len(selected_bridges)
+    if shot_budget < 1.5 * len(follow_on_names):
+        raise ValueError(
+            "Requested duration leaves less than 1.5 seconds per follow-on shot. "
+            "Use fewer bridges or increase the total reel duration."
+        )
+    allocated_shot_duration = shot_budget / len(follow_on_names)
+    items: list[LtxTimedReelItem] = []
+    for index, bridge in enumerate(selected_bridges):
+        items.append(
+            LtxTimedReelItem(
+                kind="ltx_bridge",
+                name=bridge.candidate_id,
+                input_path=bridge.generated_path,
+                source_duration_seconds=bridge.video.duration_seconds,
+                delivery_duration_seconds=bridge_duration_seconds,
+                playback_speed=bridge.video.duration_seconds / bridge_duration_seconds,
+                transition_before="opening" if index == 0 else "intentional_cut",
+            )
+        )
+        clip = clips[bridge.to_view]
+        items.append(
+            LtxTimedReelItem(
+                kind="source_clip",
+                name=clip.name,
+                input_path=clip.generated_path,
+                source_duration_seconds=clip.video.duration_seconds,
+                delivery_duration_seconds=allocated_shot_duration,
+                playback_speed=clip.video.duration_seconds / allocated_shot_duration,
+                transition_before="continuous",
+            )
+        )
+    payload = json.dumps(
+        {
+            "render": manifest.run_id,
+            "bridges": bridge_candidate_ids,
+            "total": total_duration_seconds,
+            "bridge_duration": bridge_duration_seconds,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    run_id = f"ltx-timed-reel-{hashlib.sha256(payload).hexdigest()[:16]}"
+    plan = LtxTimedReelPlan(
+        run_id=run_id,
+        created_at=datetime.now(UTC),
+        render_manifest_path=str(render_manifest_path),
+        requested_total_duration_seconds=total_duration_seconds,
+        requested_bridge_duration_seconds=bridge_duration_seconds,
+        items=items,
+        output_duration_seconds=sum(item.delivery_duration_seconds for item in items),
+        optimization_notes=[
+            "Each compatible LTX bridge receives the user-selected duration.",
+            "Remaining time is distributed evenly across bridge follow-on shots.",
+            "Unrelated areas use intentional cuts, never an invented spatial bridge.",
+            "Playback rates are recorded so delivery duration remains exact.",
+        ],
+    )
+    run_dir = output_dir / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "plan.json").write_text(plan.model_dump_json(indent=2), encoding="utf-8")
+    return plan

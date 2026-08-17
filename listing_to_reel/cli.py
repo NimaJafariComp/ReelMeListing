@@ -22,6 +22,7 @@ from listing_to_reel.video.ltx_comfyui import (
     assemble_ltx_portrait_reel,
     evaluate_ltx_render,
     load_ltx_comfyui_config,
+    plan_ltx_timed_reel,
     render_ltx_views,
 )
 from listing_to_reel.video.models import (
@@ -311,6 +312,31 @@ def assemble_ltx(
     """Create a portrait reel from explicitly human-approved landscape candidates only."""
     manifest = assemble_ltx_portrait_reel(render_manifest, accepted_clip, output_dir)
     typer.echo(manifest.model_dump_json(indent=2))
+
+
+@video_app.command("plan-ltx-reel")
+def plan_ltx_reel(
+    render_manifest: Path = typer.Option(..., "--render-manifest", exists=True, readable=True),
+    total_seconds: float = typer.Option(20.0, "--total-seconds", min=8.0, max=120.0),
+    bridge_seconds: float = typer.Option(3.0, "--bridge-seconds", min=2.0, max=4.0),
+    bridge: list[str] = typer.Option(
+        ...,
+        "--bridge",
+        help="Human-selected compatible generated bridge candidate; repeat in reel order.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("runs/ltx-timed-reels"), help="Ignored timing-plan output directory."
+    ),
+) -> None:
+    """Plan exact reel pacing from a desired total length and bridge duration."""
+    plan = plan_ltx_timed_reel(
+        render_manifest,
+        bridge,
+        total_seconds,
+        bridge_seconds,
+        output_dir,
+    )
+    typer.echo(plan.model_dump_json(indent=2))
 
 
 @video_app.command("generate")

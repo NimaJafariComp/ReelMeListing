@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -381,3 +382,27 @@ class LtxReelManifest(BaseModel):
         "Complete native 16:9 landscape foreground centered over a blurred portrait background; "
         "foreground property is never cropped."
     )
+
+
+class LtxTimedReelItem(BaseModel):
+    """One source-backed shot or selected LTX bridge in a delivery timeline."""
+
+    kind: Literal["ltx_bridge", "source_clip"]
+    name: str
+    input_path: str
+    source_duration_seconds: float = Field(gt=0)
+    delivery_duration_seconds: float = Field(gt=0)
+    playback_speed: float = Field(gt=0)
+    transition_before: Literal["opening", "continuous", "intentional_cut"]
+
+
+class LtxTimedReelPlan(BaseModel):
+    phase: str = "phase_5_ltx_timed_reel_plan"
+    run_id: str
+    created_at: datetime
+    render_manifest_path: str
+    requested_total_duration_seconds: float = Field(ge=8.0, le=120.0)
+    requested_bridge_duration_seconds: float = Field(ge=2.0, le=4.0)
+    items: list[LtxTimedReelItem] = Field(min_length=2)
+    output_duration_seconds: float = Field(gt=0)
+    optimization_notes: list[str]

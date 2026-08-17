@@ -19,6 +19,7 @@ from listing_to_reel.evaluation.models import (
 from listing_to_reel.video.ltx_comfyui import (
     assemble_ltx_portrait_reel,
     evaluate_ltx_render,
+    plan_ltx_timed_reel,
     render_ltx_views,
 )
 from listing_to_reel.video.models import (
@@ -315,3 +316,16 @@ def test_ltx_renders_only_explicitly_selected_three_second_bridge(tmp_path: Path
     assert bridge.workflow["18"]["class_type"] == "LTXVCropGuides"
     assert bridge.workflow["20"]["class_type"] == "SaveWEBM"
     assert Path(bridge.generated_path).is_file()
+
+    plan = plan_ltx_timed_reel(
+        request.output_dir / manifest.run_id / "manifest.json",
+        ["front-left-to-front-wide"],
+        total_duration_seconds=8.0,
+        bridge_duration_seconds=3.5,
+        output_dir=tmp_path / "timed-reels",
+    )
+
+    assert plan.output_duration_seconds == 8.0
+    assert plan.items[0].kind == "ltx_bridge"
+    assert plan.items[1].name == "05-front-day-wide"
+    assert (tmp_path / "timed-reels" / plan.run_id / "plan.json").is_file()
