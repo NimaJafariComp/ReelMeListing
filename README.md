@@ -79,7 +79,7 @@ uv run python -m listing_to_reel evaluate import-review \
 
 ## LTX / ComfyUI multi-shot video
 
-Phase 5 is moving to LTX image-to-video through ComfyUI on the CUDA PC. The final reel will be made from four to six independently generated, source-anchored shots of **one property**—never an invented camera flight between unrelated views.
+Phase 5 uses LTX image-to-video through ComfyUI on the CUDA PC. The final reel is made from four to six independently generated, source-anchored shots of **one property**—never an invented camera flight between unrelated views.
 
 Before rendering, create an auditable plan from independently approved source views. Each role may appear once; a wide exterior and a closing hero are required. The plan assigns 1.5–2 seconds per shot for an 8–10 second reel and records every source image used.
 
@@ -192,10 +192,11 @@ practical lighting, but must keep camera framing and property geometry fixed. An
 invented bridges must be labelled **Synthetic architectural visualization** rather than a verified
 walkthrough.
 
-The current demo exposes three reviewed candidate IDs for the committed synthetic property:
-`front-left-to-front-wide`, `patio-to-backyard`, and `front-day-to-twilight`. Arbitrary
-user-defined view pairs and inserting approved bridges into `assemble-ltx` are not implemented yet;
-the assembler currently accepts independently approved source clips only.
+The current demo includes three candidate IDs for the committed synthetic property:
+`front-left-to-front-wide`, `patio-to-backyard`, and `front-day-to-twilight`. Arbitrary compatible
+source-view pairs are also supported through `--bridge-pair`. Use `assemble-ltx-timed-reel` with a
+saved timed plan to include selected generated bridges in the final reel. `assemble-ltx` remains a
+separate, clip-only assembly command for simple source-clip reels.
 
 ```powershell
 uv run --no-sync python -m listing_to_reel video assemble-ltx `
