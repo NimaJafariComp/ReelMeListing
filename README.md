@@ -26,12 +26,12 @@ The project does not certify that generated media is truthful. A human must revi
 <p align="center"><sub>Tracked synthetic source set used to exercise the multi-view workflow.</sub></p>
 
 <p align="center">
-  <a href="artifacts/ltx-timed-reels/no-zoom-2026-08-16/reels/15s/reel.mp4">
-    <img src="docs/assets/synthetic-property-reel-preview.gif" width="270" alt="Animated five-second preview of the generated synthetic-property reel">
+  <a href="artifacts/ltx-timed-reels/no-zoom-2026-08-16/reels/20s/reel.mp4">
+    <img src="docs/assets/synthetic-property-reel-20s-preview.gif" width="270" alt="Animated preview of the full 20-second generated synthetic-property reel">
   </a>
 </p>
 
-<p align="center"><sub>Animated preview from the tracked 15-second reel. Select it to open the MP4.</sub></p>
+<p align="center"><sub>Animated preview of the tracked 20-second reel. Select it to open the MP4.</sub></p>
 
 ## What the project does
 
