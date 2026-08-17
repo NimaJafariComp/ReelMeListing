@@ -122,6 +122,28 @@ unrelated views. The final portrait editor retains the complete landscape foregr
 background fill. After recording human approval, assemble only the names that were approved, in
 edit order:
 
+### Choosing bridge candidates
+
+Group source images by property and label their visible area and viewpoint, for example
+`front-left`, `front-wide`, `backyard`, or `patio`. Select a spatial bridge only when its two
+images show the same or an adjacent physical area with enough visual overlap for a plausible camera
+move. LTX then invents a **3-second**, smooth, continuous camera transition between the two
+endpoint images. It is not a crossfade, slideshow, or static morph. Use a restrained lateral or
+forward gimbal treatment, and reject the candidate if architecture, landscaping, perspective, or
+layout changes.
+
+Images without a compatible, explicitly selected pair remain separate LTX shots and are joined by
+intentional cuts. Select a lighting-only bridge only for near-identical framing of the same view,
+such as `front-wide-daytime` to `front-wide-twilight`; it may alter sky, ambient light, and
+practical lighting, but must keep camera framing and property geometry fixed. Any reel containing
+invented bridges must be labelled **Synthetic architectural visualization** rather than a verified
+walkthrough.
+
+The current demo exposes three reviewed candidate IDs for the committed synthetic property:
+`front-left-to-front-wide`, `patio-to-backyard`, and `front-day-to-twilight`. Arbitrary
+user-defined view pairs and inserting approved bridges into `assemble-ltx` are not implemented yet;
+the assembler currently accepts independently approved source clips only.
+
 ```powershell
 uv run --no-sync python -m listing_to_reel video assemble-ltx `
   --render-manifest runs/ltx-videos/<run-id>/manifest.json `
