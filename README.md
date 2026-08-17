@@ -238,16 +238,16 @@ quality regression, and the candidate is not rejected by QA.
 
 ## Phase 7: local job API and artifacts
 
-Phase 7 exposes a local-only FastAPI service with durable SQLite job records, atomic worker claims,
+Phase 7 exposes an authenticated local FastAPI service with durable SQLite job records, atomic worker claims,
 terminal failure state, retry, and SHA-256-tracked artifact downloads. The initial supported job is
 the deterministic `fixture_reel`, so the service can be validated without model inference. Bind it
-only to localhost; this phase intentionally has no authentication or multi-tenant isolation.
+only to localhost; it requires an environment-only API key and intentionally has no multi-tenant isolation.
 
 ```powershell
-uv run --extra dev uvicorn listing_to_reel.api.app:app --host 127.0.0.1 --port 8000
+REELME_API_TOKEN="replace-with-a-long-random-secret" uv run --extra dev uvicorn listing_to_reel.api.app:app --host 127.0.0.1 --port 8000
 ```
 
-Submit `POST /jobs` with `{"kind":"fixture_reel","source_paths":["/absolute/a.jpg","/absolute/b.jpg"]}`.
+Send `X-API-Key: <REELME_API_TOKEN>` for every API request. Submit `POST /jobs` with `{"kind":"fixture_reel","source_paths":["/absolute/a.jpg","/absolute/b.jpg"]}`.
 Use `GET /jobs/{id}` for state, `POST /jobs/{id}/retry` after a failure, and
 `GET /jobs/{id}/artifacts` or `/jobs/{id}/artifacts/{name}` for the persisted lineage and download.
 

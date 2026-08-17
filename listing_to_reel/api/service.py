@@ -2,12 +2,23 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import secrets
 import sqlite3
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -204,12 +215,24 @@ class Worker:
 def create_app(
     db_path: Path = Path("runs/service/jobs.sqlite"),
     artifact_root: Path = Path("runs/service/artifacts"),
+    token: str | None = None,
 ) -> FastAPI:
+    api_token = token or os.environ.get("REELME_API_TOKEN")
+    if not api_token:
+        raise RuntimeError("Set REELME_API_TOKEN before starting the ReelMeListing API.")
     repository = JobRepository(db_path)
     worker = Worker(repository, artifact_root)
     app = FastAPI(title="ReelMeListing local job API", version="0.1.0")
     static_dir = Path(__file__).parent / "static"
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+    def authorize(
+        x_api_key: str | None = Header(default=None), access_token: str | None = Query(default=None)
+    ) -> None:
+        if not (x_api_key or access_token) or not secrets.compare_digest(
+            x_api_key or access_token, api_token
+        ):
+            raise HTTPException(401, "Valid X-API-Key required")
 
     def require(job_id: str) -> Job:
         job = repository.get(job_id)
@@ -222,13 +245,15 @@ def create_app(
         return FileResponse(static_dir / "index.html")
 
     @app.post("/jobs", response_model=Job, status_code=202)
-    def submit(request: SubmitJob, tasks: BackgroundTasks) -> Job:
+    def submit(request: SubmitJob, tasks: BackgroundTasks, _: None = Depends(authorize)) -> Job:
         job = repository.create(request)
         tasks.add_task(worker.run_once)
         return job
 
     @app.post("/uploads")
-    async def upload(files: list[UploadFile] = File(...)) -> dict[str, list[str]]:
+    async def upload(
+        files: list[UploadFile] = File(...), _: None = Depends(authorize)
+    ) -> dict[str, list[str]]:
         if not 2 <= len(files) <= 12:
             raise HTTPException(422, "Select between two and twelve images.")
         upload_dir = artifact_root / "uploads"
@@ -238,33 +263,38 @@ def create_app(
             if not (upload_file.content_type or "").startswith("image/"):
                 raise HTTPException(415, "Only image uploads are supported.")
             suffix = Path(upload_file.filename or "image.jpg").suffix.lower() or ".jpg"
+            if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
+                raise HTTPException(415, "Only JPEG, PNG, and WebP uploads are supported.")
+            content = await upload_file.read(20 * 1024 * 1024 + 1)
+            if len(content) > 20 * 1024 * 1024:
+                raise HTTPException(413, "Images must be 20 MB or smaller.")
             destination = upload_dir / f"{uuid.uuid4().hex}{suffix}"
-            destination.write_bytes(await upload_file.read())
+            destination.write_bytes(content)
             paths.append(str(destination))
         return {"source_paths": paths}
 
     @app.get("/jobs", response_model=list[Job])
-    def jobs() -> list[Job]:
+    def jobs(_: None = Depends(authorize)) -> list[Job]:
         return repository.list()
 
     @app.get("/jobs/{job_id}", response_model=Job)
-    def job(job_id: str) -> Job:
+    def job(job_id: str, _: None = Depends(authorize)) -> Job:
         return require(job_id)
 
     @app.post("/jobs/{job_id}/retry", response_model=Job, status_code=202)
-    def retry(job_id: str, tasks: BackgroundTasks) -> Job:
+    def retry(job_id: str, tasks: BackgroundTasks, _: None = Depends(authorize)) -> Job:
         if not repository.retry(job_id):
             raise HTTPException(409, "Only failed jobs can be retried")
         tasks.add_task(worker.run_once)
         return require(job_id)
 
     @app.get("/jobs/{job_id}/artifacts", response_model=list[Artifact])
-    def artifacts(job_id: str) -> list[Artifact]:
+    def artifacts(job_id: str, _: None = Depends(authorize)) -> list[Artifact]:
         require(job_id)
         return repository.artifacts(job_id)
 
     @app.get("/jobs/{job_id}/artifacts/{name}")
-    def download(job_id: str, name: str) -> FileResponse:
+    def download(job_id: str, name: str, _: None = Depends(authorize)) -> FileResponse:
         artifact = next((item for item in repository.artifacts(job_id) if item.name == name), None)
         if artifact is None:
             raise HTTPException(404, "Artifact not found")
