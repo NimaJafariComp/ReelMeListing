@@ -1,0 +1,1964 @@
+{
+  "run_id": "ltx-3851d27bdbefee78",
+  "phase": "phase_5_ltx_comfyui_render",
+  "created_at": "2026-08-17T04:13:09.969119Z",
+  "property_id": "synthetic-simple-suburban-home",
+  "generator": "comfyui_ltx_video_only",
+  "configuration": {
+    "endpoint": "http://127.0.0.1:8188",
+    "comfyui_root": "work\\ltx-comfyui\\ComfyUI",
+    "model_revision": "ltx-video-2b-0.9.8-distilled-fp8",
+    "checkpoint": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+    "text_encoder": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+    "vae": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors",
+    "width": 1024,
+    "height": 576,
+    "frames": 89,
+    "fps": 30,
+    "steps": 8,
+    "seed": 1
+  },
+  "clips": [
+    {
+      "name": "03-front-day-left",
+      "source_path": "data\\source\\synthetic_simple_suburban_home\\03-front-day-left.png",
+      "source_sha256": "4578abdb07e1a70abb95b57f32735e845d45e41a3fbe122c3ec42344373129c3",
+      "source_coverage": "native_landscape_source_anchor; complete visible foreground retained",
+      "treatment": "slow_lateral_gimbal_glide",
+      "prompt": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+      "workflow": {
+        "1": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+            "weight_dtype": "fp8_e4m3fn"
+          }
+        },
+        "2": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+            "type": "ltxv",
+            "device": "default"
+          }
+        },
+        "3": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+          }
+        },
+        "4": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-1-03-front-day-left.png"
+          }
+        },
+        "5": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "crop, vertical framing, camera shake, fast movement, morphing, warped architecture, distorted windows, changed roof, changed garage, changed patio, changed lawn, invented surroundings, flicker, text, watermark",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "7": {
+          "class_type": "LTXVImgToVideo",
+          "inputs": {
+            "positive": [
+              "5",
+              0
+            ],
+            "negative": [
+              "6",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "image": [
+              "4",
+              0
+            ],
+            "width": 1024,
+            "height": 576,
+            "length": 89,
+            "batch_size": 1,
+            "strength": 1.0
+          }
+        },
+        "8": {
+          "class_type": "LTXVConditioning",
+          "inputs": {
+            "positive": [
+              "7",
+              0
+            ],
+            "negative": [
+              "7",
+              1
+            ],
+            "frame_rate": 30.0
+          }
+        },
+        "9": {
+          "class_type": "ModelSamplingLTXV",
+          "inputs": {
+            "model": [
+              "1",
+              0
+            ],
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "10": {
+          "class_type": "BasicGuider",
+          "inputs": {
+            "model": [
+              "9",
+              0
+            ],
+            "conditioning": [
+              "8",
+              0
+            ]
+          }
+        },
+        "11": {
+          "class_type": "RandomNoise",
+          "inputs": {
+            "noise_seed": 1
+          }
+        },
+        "12": {
+          "class_type": "KSamplerSelect",
+          "inputs": {
+            "sampler_name": "euler"
+          }
+        },
+        "13": {
+          "class_type": "LTXVScheduler",
+          "inputs": {
+            "steps": 8,
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "stretch": true,
+            "terminal": 0.1,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "14": {
+          "class_type": "SamplerCustomAdvanced",
+          "inputs": {
+            "noise": [
+              "11",
+              0
+            ],
+            "guider": [
+              "10",
+              0
+            ],
+            "sampler": [
+              "12",
+              0
+            ],
+            "sigmas": [
+              "13",
+              0
+            ],
+            "latent_image": [
+              "7",
+              2
+            ]
+          }
+        },
+        "15": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "14",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ]
+          }
+        },
+        "16": {
+          "class_type": "SaveWEBM",
+          "inputs": {
+            "images": [
+              "15",
+              0
+            ],
+            "filename_prefix": "ltx-3851d27bdbefee78/03-front-day-left",
+            "codec": "vp9",
+            "fps": 30.0,
+            "crf": 20.0
+          }
+        }
+      },
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\03-front-day-left_00001_.webm",
+      "generated_sha256": "d59c583e73d628175fb5ebd93ea6fd00eeea320632c330fbbd56ae49886b4082",
+      "video": {
+        "codec_name": "vp9",
+        "width": 1024,
+        "height": 576,
+        "pixel_format": "yuv420p",
+        "frame_rate": "30/1",
+        "duration_seconds": 2.966
+      },
+      "decision": "queued_for_human_review"
+    },
+    {
+      "name": "05-front-day-wide",
+      "source_path": "data\\source\\synthetic_simple_suburban_home\\05-front-day-wide.png",
+      "source_sha256": "ba5af2e1558188bf60e0a6bb0bb7e668a3098772b554a564696ef7dc847dfc5f",
+      "source_coverage": "native_landscape_source_anchor; complete visible foreground retained",
+      "treatment": "slow_lateral_gimbal_glide",
+      "prompt": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+      "workflow": {
+        "1": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+            "weight_dtype": "fp8_e4m3fn"
+          }
+        },
+        "2": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+            "type": "ltxv",
+            "device": "default"
+          }
+        },
+        "3": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+          }
+        },
+        "4": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-2-05-front-day-wide.png"
+          }
+        },
+        "5": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "crop, vertical framing, camera shake, fast movement, morphing, warped architecture, distorted windows, changed roof, changed garage, changed patio, changed lawn, invented surroundings, flicker, text, watermark",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "7": {
+          "class_type": "LTXVImgToVideo",
+          "inputs": {
+            "positive": [
+              "5",
+              0
+            ],
+            "negative": [
+              "6",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "image": [
+              "4",
+              0
+            ],
+            "width": 1024,
+            "height": 576,
+            "length": 89,
+            "batch_size": 1,
+            "strength": 1.0
+          }
+        },
+        "8": {
+          "class_type": "LTXVConditioning",
+          "inputs": {
+            "positive": [
+              "7",
+              0
+            ],
+            "negative": [
+              "7",
+              1
+            ],
+            "frame_rate": 30.0
+          }
+        },
+        "9": {
+          "class_type": "ModelSamplingLTXV",
+          "inputs": {
+            "model": [
+              "1",
+              0
+            ],
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "10": {
+          "class_type": "BasicGuider",
+          "inputs": {
+            "model": [
+              "9",
+              0
+            ],
+            "conditioning": [
+              "8",
+              0
+            ]
+          }
+        },
+        "11": {
+          "class_type": "RandomNoise",
+          "inputs": {
+            "noise_seed": 2
+          }
+        },
+        "12": {
+          "class_type": "KSamplerSelect",
+          "inputs": {
+            "sampler_name": "euler"
+          }
+        },
+        "13": {
+          "class_type": "LTXVScheduler",
+          "inputs": {
+            "steps": 8,
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "stretch": true,
+            "terminal": 0.1,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "14": {
+          "class_type": "SamplerCustomAdvanced",
+          "inputs": {
+            "noise": [
+              "11",
+              0
+            ],
+            "guider": [
+              "10",
+              0
+            ],
+            "sampler": [
+              "12",
+              0
+            ],
+            "sigmas": [
+              "13",
+              0
+            ],
+            "latent_image": [
+              "7",
+              2
+            ]
+          }
+        },
+        "15": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "14",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ]
+          }
+        },
+        "16": {
+          "class_type": "SaveWEBM",
+          "inputs": {
+            "images": [
+              "15",
+              0
+            ],
+            "filename_prefix": "ltx-3851d27bdbefee78/05-front-day-wide",
+            "codec": "vp9",
+            "fps": 30.0,
+            "crf": 20.0
+          }
+        }
+      },
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\05-front-day-wide_00001_.webm",
+      "generated_sha256": "d21ed9b98c82abfb5365f3f2ea336b852b2089ffad08315245e554aaa9e3a255",
+      "video": {
+        "codec_name": "vp9",
+        "width": 1024,
+        "height": 576,
+        "pixel_format": "yuv420p",
+        "frame_rate": "30/1",
+        "duration_seconds": 2.966
+      },
+      "decision": "queued_for_human_review"
+    },
+    {
+      "name": "02-covered-patio",
+      "source_path": "data\\source\\synthetic_simple_suburban_home\\02-covered-patio.png",
+      "source_sha256": "70836d933e43e43aac766f1fa6b2031dad4cacec45a5e9a44dde7d672ae59598",
+      "source_coverage": "native_landscape_source_anchor; complete visible foreground retained",
+      "treatment": "slow_lateral_gimbal_glide",
+      "prompt": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+      "workflow": {
+        "1": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+            "weight_dtype": "fp8_e4m3fn"
+          }
+        },
+        "2": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+            "type": "ltxv",
+            "device": "default"
+          }
+        },
+        "3": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+          }
+        },
+        "4": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-3-02-covered-patio.png"
+          }
+        },
+        "5": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "crop, vertical framing, camera shake, fast movement, morphing, warped architecture, distorted windows, changed roof, changed garage, changed patio, changed lawn, invented surroundings, flicker, text, watermark",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "7": {
+          "class_type": "LTXVImgToVideo",
+          "inputs": {
+            "positive": [
+              "5",
+              0
+            ],
+            "negative": [
+              "6",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "image": [
+              "4",
+              0
+            ],
+            "width": 1024,
+            "height": 576,
+            "length": 89,
+            "batch_size": 1,
+            "strength": 1.0
+          }
+        },
+        "8": {
+          "class_type": "LTXVConditioning",
+          "inputs": {
+            "positive": [
+              "7",
+              0
+            ],
+            "negative": [
+              "7",
+              1
+            ],
+            "frame_rate": 30.0
+          }
+        },
+        "9": {
+          "class_type": "ModelSamplingLTXV",
+          "inputs": {
+            "model": [
+              "1",
+              0
+            ],
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "10": {
+          "class_type": "BasicGuider",
+          "inputs": {
+            "model": [
+              "9",
+              0
+            ],
+            "conditioning": [
+              "8",
+              0
+            ]
+          }
+        },
+        "11": {
+          "class_type": "RandomNoise",
+          "inputs": {
+            "noise_seed": 3
+          }
+        },
+        "12": {
+          "class_type": "KSamplerSelect",
+          "inputs": {
+            "sampler_name": "euler"
+          }
+        },
+        "13": {
+          "class_type": "LTXVScheduler",
+          "inputs": {
+            "steps": 8,
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "stretch": true,
+            "terminal": 0.1,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "14": {
+          "class_type": "SamplerCustomAdvanced",
+          "inputs": {
+            "noise": [
+              "11",
+              0
+            ],
+            "guider": [
+              "10",
+              0
+            ],
+            "sampler": [
+              "12",
+              0
+            ],
+            "sigmas": [
+              "13",
+              0
+            ],
+            "latent_image": [
+              "7",
+              2
+            ]
+          }
+        },
+        "15": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "14",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ]
+          }
+        },
+        "16": {
+          "class_type": "SaveWEBM",
+          "inputs": {
+            "images": [
+              "15",
+              0
+            ],
+            "filename_prefix": "ltx-3851d27bdbefee78/02-covered-patio",
+            "codec": "vp9",
+            "fps": 30.0,
+            "crf": 20.0
+          }
+        }
+      },
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\02-covered-patio_00001_.webm",
+      "generated_sha256": "a5e780ebb2ca04d5b1002b6652dfb7feb749ea2f6ff00f9722f6dbd562028c43",
+      "video": {
+        "codec_name": "vp9",
+        "width": 1024,
+        "height": 576,
+        "pixel_format": "yuv420p",
+        "frame_rate": "30/1",
+        "duration_seconds": 2.966
+      },
+      "decision": "queued_for_human_review"
+    },
+    {
+      "name": "04-backyard-patio",
+      "source_path": "data\\source\\synthetic_simple_suburban_home\\04-backyard-patio.png",
+      "source_sha256": "3afcf019c75a45604271df5cc0974bd40af9c6740af910e087008f904bd96b95",
+      "source_coverage": "native_landscape_source_anchor; complete visible foreground retained",
+      "treatment": "slow_lateral_gimbal_glide",
+      "prompt": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+      "workflow": {
+        "1": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+            "weight_dtype": "fp8_e4m3fn"
+          }
+        },
+        "2": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+            "type": "ltxv",
+            "device": "default"
+          }
+        },
+        "3": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+          }
+        },
+        "4": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-4-04-backyard-patio.png"
+          }
+        },
+        "5": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "crop, vertical framing, camera shake, fast movement, morphing, warped architecture, distorted windows, changed roof, changed garage, changed patio, changed lawn, invented surroundings, flicker, text, watermark",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "7": {
+          "class_type": "LTXVImgToVideo",
+          "inputs": {
+            "positive": [
+              "5",
+              0
+            ],
+            "negative": [
+              "6",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "image": [
+              "4",
+              0
+            ],
+            "width": 1024,
+            "height": 576,
+            "length": 89,
+            "batch_size": 1,
+            "strength": 1.0
+          }
+        },
+        "8": {
+          "class_type": "LTXVConditioning",
+          "inputs": {
+            "positive": [
+              "7",
+              0
+            ],
+            "negative": [
+              "7",
+              1
+            ],
+            "frame_rate": 30.0
+          }
+        },
+        "9": {
+          "class_type": "ModelSamplingLTXV",
+          "inputs": {
+            "model": [
+              "1",
+              0
+            ],
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "10": {
+          "class_type": "BasicGuider",
+          "inputs": {
+            "model": [
+              "9",
+              0
+            ],
+            "conditioning": [
+              "8",
+              0
+            ]
+          }
+        },
+        "11": {
+          "class_type": "RandomNoise",
+          "inputs": {
+            "noise_seed": 4
+          }
+        },
+        "12": {
+          "class_type": "KSamplerSelect",
+          "inputs": {
+            "sampler_name": "euler"
+          }
+        },
+        "13": {
+          "class_type": "LTXVScheduler",
+          "inputs": {
+            "steps": 8,
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "stretch": true,
+            "terminal": 0.1,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "14": {
+          "class_type": "SamplerCustomAdvanced",
+          "inputs": {
+            "noise": [
+              "11",
+              0
+            ],
+            "guider": [
+              "10",
+              0
+            ],
+            "sampler": [
+              "12",
+              0
+            ],
+            "sigmas": [
+              "13",
+              0
+            ],
+            "latent_image": [
+              "7",
+              2
+            ]
+          }
+        },
+        "15": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "14",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ]
+          }
+        },
+        "16": {
+          "class_type": "SaveWEBM",
+          "inputs": {
+            "images": [
+              "15",
+              0
+            ],
+            "filename_prefix": "ltx-3851d27bdbefee78/04-backyard-patio",
+            "codec": "vp9",
+            "fps": 30.0,
+            "crf": 20.0
+          }
+        }
+      },
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\04-backyard-patio_00001_.webm",
+      "generated_sha256": "41de04c25b4fe94b6833d969d0641a7d015db6b824b219e4435d5afd2f725fd8",
+      "video": {
+        "codec_name": "vp9",
+        "width": 1024,
+        "height": 576,
+        "pixel_format": "yuv420p",
+        "frame_rate": "30/1",
+        "duration_seconds": 2.966
+      },
+      "decision": "queued_for_human_review"
+    },
+    {
+      "name": "01-front-twilight",
+      "source_path": "data\\source\\synthetic_simple_suburban_home\\01-front-twilight.png",
+      "source_sha256": "9e1794cbf96e960abb38c8f6e924a532f414fe445d3fbd1823f5e6e1dedc4bab",
+      "source_coverage": "native_landscape_source_anchor; complete visible foreground retained",
+      "treatment": "slow_lateral_gimbal_glide",
+      "prompt": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+      "workflow": {
+        "1": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+            "weight_dtype": "fp8_e4m3fn"
+          }
+        },
+        "2": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+            "type": "ltxv",
+            "device": "default"
+          }
+        },
+        "3": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+          }
+        },
+        "4": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-5-01-front-twilight.png"
+          }
+        },
+        "5": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "Continuous native 16:9 landscape real-estate shot of the provided source view. Use a slow stabilized lateral gimbal glide with subtle natural parallax only. Preserve every visible roof, window, garage, patio column, lawn edge, block wall, tree, driveway, material, and proportion. Keep the complete visible property and sky in frame. No handheld shake, fast zoom, dramatic orbit, crop, invented surroundings, people, vehicles, structural additions, removals, morphing, warping, flicker, text, or watermark.",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "crop, vertical framing, camera shake, fast movement, morphing, warped architecture, distorted windows, changed roof, changed garage, changed patio, changed lawn, invented surroundings, flicker, text, watermark",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "7": {
+          "class_type": "LTXVImgToVideo",
+          "inputs": {
+            "positive": [
+              "5",
+              0
+            ],
+            "negative": [
+              "6",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "image": [
+              "4",
+              0
+            ],
+            "width": 1024,
+            "height": 576,
+            "length": 89,
+            "batch_size": 1,
+            "strength": 1.0
+          }
+        },
+        "8": {
+          "class_type": "LTXVConditioning",
+          "inputs": {
+            "positive": [
+              "7",
+              0
+            ],
+            "negative": [
+              "7",
+              1
+            ],
+            "frame_rate": 30.0
+          }
+        },
+        "9": {
+          "class_type": "ModelSamplingLTXV",
+          "inputs": {
+            "model": [
+              "1",
+              0
+            ],
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "10": {
+          "class_type": "BasicGuider",
+          "inputs": {
+            "model": [
+              "9",
+              0
+            ],
+            "conditioning": [
+              "8",
+              0
+            ]
+          }
+        },
+        "11": {
+          "class_type": "RandomNoise",
+          "inputs": {
+            "noise_seed": 5
+          }
+        },
+        "12": {
+          "class_type": "KSamplerSelect",
+          "inputs": {
+            "sampler_name": "euler"
+          }
+        },
+        "13": {
+          "class_type": "LTXVScheduler",
+          "inputs": {
+            "steps": 8,
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "stretch": true,
+            "terminal": 0.1,
+            "latent": [
+              "7",
+              2
+            ]
+          }
+        },
+        "14": {
+          "class_type": "SamplerCustomAdvanced",
+          "inputs": {
+            "noise": [
+              "11",
+              0
+            ],
+            "guider": [
+              "10",
+              0
+            ],
+            "sampler": [
+              "12",
+              0
+            ],
+            "sigmas": [
+              "13",
+              0
+            ],
+            "latent_image": [
+              "7",
+              2
+            ]
+          }
+        },
+        "15": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "14",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ]
+          }
+        },
+        "16": {
+          "class_type": "SaveWEBM",
+          "inputs": {
+            "images": [
+              "15",
+              0
+            ],
+            "filename_prefix": "ltx-3851d27bdbefee78/01-front-twilight",
+            "codec": "vp9",
+            "fps": 30.0,
+            "crf": 20.0
+          }
+        }
+      },
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\01-front-twilight_00001_.webm",
+      "generated_sha256": "5445bbe6426a1569e4f2b890d8008bca19387908db96b78558948d6811406ef6",
+      "video": {
+        "codec_name": "vp9",
+        "width": 1024,
+        "height": 576,
+        "pixel_format": "yuv420p",
+        "frame_rate": "30/1",
+        "duration_seconds": 2.966
+      },
+      "decision": "queued_for_human_review"
+    }
+  ],
+  "bridge_candidates": [
+    {
+      "candidate_id": "front-left-to-front-wide",
+      "kind": "spatial_overlap",
+      "from_view": "03-front-day-left",
+      "to_view": "05-front-day-wide",
+      "duration_seconds": 3.0,
+      "prompt": "User-selected compatible front pair. Generate a restrained lateral or forward camera continuation through the shared front geometry.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject if roof, windows, driveway, trees, or wall geometry bends or shifts."
+    },
+    {
+      "candidate_id": "patio-to-backyard",
+      "kind": "spatial_overlap",
+      "from_view": "02-covered-patio",
+      "to_view": "04-backyard-patio",
+      "duration_seconds": 3.0,
+      "prompt": "User-selected adjacent patio/backyard pair. Generate a restrained camera move only through visibly compatible outdoor geometry.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject unless overlap is obvious and all geometry remains coherent; use a deliberate cut otherwise."
+    },
+    {
+      "candidate_id": "front-day-to-twilight",
+      "kind": "lighting_only",
+      "from_view": "05-front-day-wide",
+      "to_view": "01-front-twilight",
+      "duration_seconds": 3.0,
+      "prompt": "User-selected lighting-only pair. Freeze the front framing and geometry; change only daylight, sky color, and practical/interior lighting.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject if the house, driveway, trees, windows, or patio shift."
+    }
+  ],
+  "bridges": [
+    {
+      "candidate_id": "front-left-to-front-wide",
+      "kind": "spatial_overlap",
+      "from_view": "03-front-day-left",
+      "to_view": "05-front-day-wide",
+      "duration_seconds": 5.0,
+      "prompt": "User-selected compatible front pair. Generate a restrained lateral or forward camera continuation through the shared front geometry.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject if roof, windows, driveway, trees, or wall geometry bends or shifts.",
+      "from_source_path": "data\\source\\synthetic_simple_suburban_home\\03-front-day-left.png",
+      "from_source_sha256": "4578abdb07e1a70abb95b57f32735e845d45e41a3fbe122c3ec42344373129c3",
+      "to_source_path": "data\\source\\synthetic_simple_suburban_home\\05-front-day-wide.png",
+      "to_source_sha256": "ba5af2e1558188bf60e0a6bb0bb7e668a3098772b554a564696ef7dc847dfc5f",
+      "workflow": {
+        "1": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+            "weight_dtype": "fp8_e4m3fn"
+          }
+        },
+        "2": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+            "type": "ltxv",
+            "device": "default"
+          }
+        },
+        "3": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+          }
+        },
+        "4": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-1-03-front-day-left.png"
+          }
+        },
+        "5": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-2-05-front-day-wide.png"
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "5-second continuous native 16:9 luxury real-estate camera bridge between the two provided views of the same synthetic property. Invent only a restrained, stabilized slow forward or lateral gimbal move that connects their shared visible area. Preserve rooflines, windows, garage, patio columns, lawn edges, walls, trees, driveway, perspective, materials, and layout. No crossfade, slideshow, static morph, handheld shake, fast zoom, orbit, people, vehicles, invented surroundings, structural changes, warping, flicker, text, watermark, or crop.",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "crossfade, slideshow, static image morph, warped architecture, changed house, changed landscaping, perspective shift, flicker, text, watermark",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "8": {
+          "class_type": "EmptyLTXVLatentVideo",
+          "inputs": {
+            "width": 1024,
+            "height": 576,
+            "length": 153,
+            "batch_size": 1
+          }
+        },
+        "9": {
+          "class_type": "LTXVAddGuide",
+          "inputs": {
+            "positive": [
+              "6",
+              0
+            ],
+            "negative": [
+              "7",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "latent": [
+              "8",
+              0
+            ],
+            "image": [
+              "4",
+              0
+            ],
+            "frame_idx": 0,
+            "strength": 1.0
+          }
+        },
+        "10": {
+          "class_type": "LTXVAddGuide",
+          "inputs": {
+            "positive": [
+              "9",
+              0
+            ],
+            "negative": [
+              "9",
+              1
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "latent": [
+              "9",
+              2
+            ],
+            "image": [
+              "5",
+              0
+            ],
+            "frame_idx": 152,
+            "strength": 1.0
+          }
+        },
+        "11": {
+          "class_type": "LTXVConditioning",
+          "inputs": {
+            "positive": [
+              "10",
+              0
+            ],
+            "negative": [
+              "10",
+              1
+            ],
+            "frame_rate": 30.0
+          }
+        },
+        "12": {
+          "class_type": "ModelSamplingLTXV",
+          "inputs": {
+            "model": [
+              "1",
+              0
+            ],
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "latent": [
+              "10",
+              2
+            ]
+          }
+        },
+        "13": {
+          "class_type": "BasicGuider",
+          "inputs": {
+            "model": [
+              "12",
+              0
+            ],
+            "conditioning": [
+              "11",
+              0
+            ]
+          }
+        },
+        "14": {
+          "class_type": "RandomNoise",
+          "inputs": {
+            "noise_seed": 6
+          }
+        },
+        "15": {
+          "class_type": "KSamplerSelect",
+          "inputs": {
+            "sampler_name": "euler"
+          }
+        },
+        "16": {
+          "class_type": "LTXVScheduler",
+          "inputs": {
+            "steps": 8,
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "stretch": true,
+            "terminal": 0.1,
+            "latent": [
+              "10",
+              2
+            ]
+          }
+        },
+        "17": {
+          "class_type": "SamplerCustomAdvanced",
+          "inputs": {
+            "noise": [
+              "14",
+              0
+            ],
+            "guider": [
+              "13",
+              0
+            ],
+            "sampler": [
+              "15",
+              0
+            ],
+            "sigmas": [
+              "16",
+              0
+            ],
+            "latent_image": [
+              "10",
+              2
+            ]
+          }
+        },
+        "18": {
+          "class_type": "LTXVCropGuides",
+          "inputs": {
+            "positive": [
+              "10",
+              0
+            ],
+            "negative": [
+              "10",
+              1
+            ],
+            "latent": [
+              "17",
+              0
+            ]
+          }
+        },
+        "19": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "18",
+              2
+            ],
+            "vae": [
+              "3",
+              0
+            ]
+          }
+        },
+        "20": {
+          "class_type": "SaveWEBM",
+          "inputs": {
+            "images": [
+              "19",
+              0
+            ],
+            "filename_prefix": "ltx-3851d27bdbefee78/bridges/front-left-to-front-wide",
+            "codec": "vp9",
+            "fps": 30.0,
+            "crf": 20.0
+          }
+        }
+      },
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-left-to-front-wide_00001_.webm",
+      "generated_sha256": "d4a410cdc6f077a47204da9f48ac9f76366e047b2ea77afe41bf3547da4ea5dd",
+      "video": {
+        "codec_name": "vp9",
+        "width": 1024,
+        "height": 576,
+        "pixel_format": "yuv420p",
+        "frame_rate": "30/1",
+        "duration_seconds": 5.1
+      }
+    },
+    {
+      "candidate_id": "patio-to-backyard",
+      "kind": "spatial_overlap",
+      "from_view": "02-covered-patio",
+      "to_view": "04-backyard-patio",
+      "duration_seconds": 3.0,
+      "prompt": "User-selected adjacent patio/backyard pair. Generate a restrained camera move only through visibly compatible outdoor geometry.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject unless overlap is obvious and all geometry remains coherent; use a deliberate cut otherwise.",
+      "from_source_path": "data\\source\\synthetic_simple_suburban_home\\02-covered-patio.png",
+      "from_source_sha256": "70836d933e43e43aac766f1fa6b2031dad4cacec45a5e9a44dde7d672ae59598",
+      "to_source_path": "data\\source\\synthetic_simple_suburban_home\\04-backyard-patio.png",
+      "to_source_sha256": "3afcf019c75a45604271df5cc0974bd40af9c6740af910e087008f904bd96b95",
+      "workflow": {
+        "1": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+            "weight_dtype": "fp8_e4m3fn"
+          }
+        },
+        "2": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+            "type": "ltxv",
+            "device": "default"
+          }
+        },
+        "3": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+          }
+        },
+        "4": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-3-02-covered-patio.png"
+          }
+        },
+        "5": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-4-04-backyard-patio.png"
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "3-second continuous native 16:9 luxury real-estate camera bridge between the two provided views of the same synthetic property. Invent only a restrained, stabilized slow forward or lateral gimbal move that connects their shared visible area. Preserve rooflines, windows, garage, patio columns, lawn edges, walls, trees, driveway, perspective, materials, and layout. No crossfade, slideshow, static morph, handheld shake, fast zoom, orbit, people, vehicles, invented surroundings, structural changes, warping, flicker, text, watermark, or crop.",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "crossfade, slideshow, static image morph, warped architecture, changed house, changed landscaping, perspective shift, flicker, text, watermark",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "8": {
+          "class_type": "EmptyLTXVLatentVideo",
+          "inputs": {
+            "width": 1024,
+            "height": 576,
+            "length": 89,
+            "batch_size": 1
+          }
+        },
+        "9": {
+          "class_type": "LTXVAddGuide",
+          "inputs": {
+            "positive": [
+              "6",
+              0
+            ],
+            "negative": [
+              "7",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "latent": [
+              "8",
+              0
+            ],
+            "image": [
+              "4",
+              0
+            ],
+            "frame_idx": 0,
+            "strength": 1.0
+          }
+        },
+        "10": {
+          "class_type": "LTXVAddGuide",
+          "inputs": {
+            "positive": [
+              "9",
+              0
+            ],
+            "negative": [
+              "9",
+              1
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "latent": [
+              "9",
+              2
+            ],
+            "image": [
+              "5",
+              0
+            ],
+            "frame_idx": 88,
+            "strength": 1.0
+          }
+        },
+        "11": {
+          "class_type": "LTXVConditioning",
+          "inputs": {
+            "positive": [
+              "10",
+              0
+            ],
+            "negative": [
+              "10",
+              1
+            ],
+            "frame_rate": 30.0
+          }
+        },
+        "12": {
+          "class_type": "ModelSamplingLTXV",
+          "inputs": {
+            "model": [
+              "1",
+              0
+            ],
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "latent": [
+              "10",
+              2
+            ]
+          }
+        },
+        "13": {
+          "class_type": "BasicGuider",
+          "inputs": {
+            "model": [
+              "12",
+              0
+            ],
+            "conditioning": [
+              "11",
+              0
+            ]
+          }
+        },
+        "14": {
+          "class_type": "RandomNoise",
+          "inputs": {
+            "noise_seed": 7
+          }
+        },
+        "15": {
+          "class_type": "KSamplerSelect",
+          "inputs": {
+            "sampler_name": "euler"
+          }
+        },
+        "16": {
+          "class_type": "LTXVScheduler",
+          "inputs": {
+            "steps": 8,
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "stretch": true,
+            "terminal": 0.1,
+            "latent": [
+              "10",
+              2
+            ]
+          }
+        },
+        "17": {
+          "class_type": "SamplerCustomAdvanced",
+          "inputs": {
+            "noise": [
+              "14",
+              0
+            ],
+            "guider": [
+              "13",
+              0
+            ],
+            "sampler": [
+              "15",
+              0
+            ],
+            "sigmas": [
+              "16",
+              0
+            ],
+            "latent_image": [
+              "10",
+              2
+            ]
+          }
+        },
+        "18": {
+          "class_type": "LTXVCropGuides",
+          "inputs": {
+            "positive": [
+              "10",
+              0
+            ],
+            "negative": [
+              "10",
+              1
+            ],
+            "latent": [
+              "17",
+              0
+            ]
+          }
+        },
+        "19": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "18",
+              2
+            ],
+            "vae": [
+              "3",
+              0
+            ]
+          }
+        },
+        "20": {
+          "class_type": "SaveWEBM",
+          "inputs": {
+            "images": [
+              "19",
+              0
+            ],
+            "filename_prefix": "ltx-3851d27bdbefee78/bridges/patio-to-backyard",
+            "codec": "vp9",
+            "fps": 30.0,
+            "crf": 20.0
+          }
+        }
+      },
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\patio-to-backyard_00001_.webm",
+      "generated_sha256": "7138293511fd571d28eece91ae08c0e323cf52d387b9a88cef2afc898d5aa208",
+      "video": {
+        "codec_name": "vp9",
+        "width": 1024,
+        "height": 576,
+        "pixel_format": "yuv420p",
+        "frame_rate": "30/1",
+        "duration_seconds": 2.966
+      }
+    },
+    {
+      "candidate_id": "front-day-to-twilight",
+      "kind": "lighting_only",
+      "from_view": "05-front-day-wide",
+      "to_view": "01-front-twilight",
+      "duration_seconds": 3.0,
+      "prompt": "User-selected lighting-only pair. Freeze the front framing and geometry; change only daylight, sky color, and practical/interior lighting.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject if the house, driveway, trees, windows, or patio shift.",
+      "from_source_path": "data\\source\\synthetic_simple_suburban_home\\05-front-day-wide.png",
+      "from_source_sha256": "ba5af2e1558188bf60e0a6bb0bb7e668a3098772b554a564696ef7dc847dfc5f",
+      "to_source_path": "data\\source\\synthetic_simple_suburban_home\\01-front-twilight.png",
+      "to_source_sha256": "9e1794cbf96e960abb38c8f6e924a532f414fe445d3fbd1823f5e6e1dedc4bab",
+      "workflow": {
+        "1": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "ltxv-2b-0.9.8-distilled-fp8.safetensors",
+            "weight_dtype": "fp8_e4m3fn"
+          }
+        },
+        "2": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "text_encoders\\t5xxl_fp8_e4m3fn.safetensors",
+            "type": "ltxv",
+            "device": "default"
+          }
+        },
+        "3": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "vae\\LTXV-13B-0.9.8-dev-VAE.safetensors"
+          }
+        },
+        "4": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-2-05-front-day-wide.png"
+          }
+        },
+        "5": {
+          "class_type": "LoadImage",
+          "inputs": {
+            "image": "synthetic-simple-suburban-home-5-01-front-twilight.png"
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "3-second continuous native 16:9 architectural time-lapse between the two provided views of the same front elevation. Lock the camera position, framing, house, driveway, windows, roof, landscaping, and all geometry exactly in place. Change only sky color, ambient daylight, and practical or interior lighting. No camera motion, object motion, morphing, warping, additions, removals, flicker, text, watermark, or crop.",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "text": "crossfade, slideshow, static image morph, warped architecture, changed house, changed landscaping, perspective shift, flicker, text, watermark",
+            "clip": [
+              "2",
+              0
+            ]
+          }
+        },
+        "8": {
+          "class_type": "EmptyLTXVLatentVideo",
+          "inputs": {
+            "width": 1024,
+            "height": 576,
+            "length": 89,
+            "batch_size": 1
+          }
+        },
+        "9": {
+          "class_type": "LTXVAddGuide",
+          "inputs": {
+            "positive": [
+              "6",
+              0
+            ],
+            "negative": [
+              "7",
+              0
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "latent": [
+              "8",
+              0
+            ],
+            "image": [
+              "4",
+              0
+            ],
+            "frame_idx": 0,
+            "strength": 1.0
+          }
+        },
+        "10": {
+          "class_type": "LTXVAddGuide",
+          "inputs": {
+            "positive": [
+              "9",
+              0
+            ],
+            "negative": [
+              "9",
+              1
+            ],
+            "vae": [
+              "3",
+              0
+            ],
+            "latent": [
+              "9",
+              2
+            ],
+            "image": [
+              "5",
+              0
+            ],
+            "frame_idx": 88,
+            "strength": 1.0
+          }
+        },
+        "11": {
+          "class_type": "LTXVConditioning",
+          "inputs": {
+            "positive": [
+              "10",
+              0
+            ],
+            "negative": [
+              "10",
+              1
+            ],
+            "frame_rate": 30.0
+          }
+        },
+        "12": {
+          "class_type": "ModelSamplingLTXV",
+          "inputs": {
+            "model": [
+              "1",
+              0
+            ],
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "latent": [
+              "10",
+              2
+            ]
+          }
+        },
+        "13": {
+          "class_type": "BasicGuider",
+          "inputs": {
+            "model": [
+              "12",
+              0
+            ],
+            "conditioning": [
+              "11",
+              0
+            ]
+          }
+        },
+        "14": {
+          "class_type": "RandomNoise",
+          "inputs": {
+            "noise_seed": 8
+          }
+        },
+        "15": {
+          "class_type": "KSamplerSelect",
+          "inputs": {
+            "sampler_name": "euler"
+          }
+        },
+        "16": {
+          "class_type": "LTXVScheduler",
+          "inputs": {
+            "steps": 8,
+            "max_shift": 2.05,
+            "base_shift": 0.95,
+            "stretch": true,
+            "terminal": 0.1,
+            "latent": [
+              "10",
+              2
+            ]
+          }
+        },
+        "17": {
+          "class_type": "SamplerCustomAdvanced",
+          "inputs": {
+            "noise": [
+              "14",
+              0
+            ],
+            "guider": [
+              "13",
+              0
+            ],
+            "sampler": [
+              "15",
+              0
+            ],
+            "sigmas": [
+              "16",
+              0
+            ],
+            "latent_image": [
+              "10",
+              2
+            ]
+          }
+        },
+        "18": {
+          "class_type": "LTXVCropGuides",
+          "inputs": {
+            "positive": [
+              "10",
+              0
+            ],
+            "negative": [
+              "10",
+              1
+            ],
+            "latent": [
+              "17",
+              0
+            ]
+          }
+        },
+        "19": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "18",
+              2
+            ],
+            "vae": [
+              "3",
+              0
+            ]
+          }
+        },
+        "20": {
+          "class_type": "SaveWEBM",
+          "inputs": {
+            "images": [
+              "19",
+              0
+            ],
+            "filename_prefix": "ltx-3851d27bdbefee78/bridges/front-day-to-twilight",
+            "codec": "vp9",
+            "fps": 30.0,
+            "crf": 20.0
+          }
+        }
+      },
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-day-to-twilight_00001_.webm",
+      "generated_sha256": "907d4551dcebcfeaaa6ae94274b92a396c29bfdd09b28df82c53bcf588631fe6",
+      "video": {
+        "codec_name": "vp9",
+        "width": 1024,
+        "height": 576,
+        "pixel_format": "yuv420p",
+        "frame_rate": "30/1",
+        "duration_seconds": 2.966
+      }
+    }
+  ],
+  "source_coverage": {
+    "data\\source\\synthetic_simple_suburban_home\\03-front-day-left.png": "included_as_native_landscape_ltx_source_view",
+    "data\\source\\synthetic_simple_suburban_home\\05-front-day-wide.png": "included_as_native_landscape_ltx_source_view",
+    "data\\source\\synthetic_simple_suburban_home\\02-covered-patio.png": "included_as_native_landscape_ltx_source_view",
+    "data\\source\\synthetic_simple_suburban_home\\04-backyard-patio.png": "included_as_native_landscape_ltx_source_view",
+    "data\\source\\synthetic_simple_suburban_home\\01-front-twilight.png": "included_as_native_landscape_ltx_source_view"
+  },
+  "qa_status": "queued_for_human_review"
+}

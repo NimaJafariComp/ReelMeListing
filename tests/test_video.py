@@ -329,3 +329,43 @@ def test_ltx_renders_only_explicitly_selected_three_second_bridge(tmp_path: Path
     assert plan.items[0].kind == "ltx_bridge"
     assert plan.items[1].name == "05-front-day-wide"
     assert (tmp_path / "timed-reels" / plan.run_id / "plan.json").is_file()
+
+
+def test_ltx_timed_reel_supports_one_longer_selected_bridge(tmp_path: Path) -> None:
+    front_left = tmp_path / "front-left.png"
+    front_wide = tmp_path / "front-wide.png"
+    Image.new("RGB", (320, 180), "#d8b084").save(front_left)
+    Image.new("RGB", (320, 180), "#d8b084").save(front_wide)
+    client = FakeComfyUiClient(tmp_path / "comfy" / "output")
+    request = LtxRenderRequest(
+        property_id="synthetic-simple-suburban-home",
+        source_views=[
+            LtxSourceView(
+                name="03-front-day-left",
+                source_path=front_left,
+                treatment=LtxMotionTreatment.LATERAL_GIMBAL,
+            ),
+            LtxSourceView(
+                name="05-front-day-wide",
+                source_path=front_wide,
+                treatment=LtxMotionTreatment.LATERAL_GIMBAL,
+            ),
+        ],
+        bridge_candidate_ids=["front-left-to-front-wide"],
+        bridge_duration_seconds={"front-left-to-front-wide": 5.0},
+        configuration=LtxComfyUiConfig(
+            comfyui_root=tmp_path / "comfy", model_revision="test-revision"
+        ),
+        output_dir=tmp_path / "runs",
+    )
+    manifest = render_ltx_views(request, client)
+    plan = plan_ltx_timed_reel(
+        request.output_dir / manifest.run_id / "manifest.json",
+        ["front-left-to-front-wide"],
+        total_duration_seconds=8.0,
+        bridge_duration_seconds={"front-left-to-front-wide": 5.0},
+        output_dir=tmp_path / "timed-reels",
+    )
+
+    assert plan.items[0].delivery_duration_seconds == 5.0
+    assert plan.requested_bridge_duration_overrides == {"front-left-to-front-wide": 5.0}

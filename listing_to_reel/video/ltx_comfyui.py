@@ -35,6 +35,7 @@ from listing_to_reel.video.models import (
     LtxRenderManifest,
     LtxRenderRequest,
     LtxTimedReelItem,
+    LtxTimedReelManifest,
     LtxTimedReelPlan,
     TemporalMetrics,
     VideoDecision,
@@ -206,9 +207,11 @@ def build_ltx_workflow(
 
 
 def _bridge_prompt(candidate: LtxBridgeCandidate) -> str:
+    duration = f"{candidate.duration_seconds:g}-second"
     if candidate.kind is LtxBridgeKind.LIGHTING_ONLY:
         return (
-            "Three-second continuous native 16:9 architectural time-lapse between the two "
+            f"{duration.capitalize()} continuous native 16:9 architectural time-lapse "
+            "between the two "
             "provided views of the same front elevation. Lock the camera position, framing, "
             "house, driveway, windows, roof, landscaping, and all geometry exactly in place. "
             "Change only sky color, ambient daylight, and practical or interior lighting. No "
@@ -216,7 +219,8 @@ def _bridge_prompt(candidate: LtxBridgeCandidate) -> str:
             "text, watermark, or crop."
         )
     return (
-        "Three-second continuous native 16:9 luxury real-estate camera bridge between the two "
+        f"{duration.capitalize()} continuous native 16:9 luxury real-estate camera bridge "
+        "between the two "
         "provided views of the same synthetic property. Invent only a restrained, stabilized "
         "slow forward or lateral gimbal move that connects their shared visible area. Preserve "
         "rooflines, windows, garage, patio columns, lawn edges, walls, trees, driveway, "
@@ -227,7 +231,7 @@ def _bridge_prompt(candidate: LtxBridgeCandidate) -> str:
 
 
 def _bridge_latent_frames(config: LtxComfyUiConfig, duration_seconds: float) -> int:
-    """Map a user-selected 2–4 second delivery duration to LTX's 8n+1 latent length."""
+    """Map a user-selected 2–6 second delivery duration to LTX's 8n+1 latent length."""
     desired_delivery_frames = round(duration_seconds * config.fps)
     # LTXVCropGuides removes the two guide slots after sampling, so the requested
     # latent duration is the delivery duration rather than the longer working duration.
@@ -431,7 +435,18 @@ def render_ltx_views(
     output_dir = config.comfyui_root / "output"
     if client is None:
         client = HttpComfyUiClient(config.endpoint, output_dir)
-    identity = [(view.name, _sha256(view.source_path)) for view in request.source_views]
+    identity = {
+        "sources": [
+            (view.name, _sha256(view.source_path), view.treatment.value)
+            for view in request.source_views
+        ],
+        "bridge_ids": request.bridge_candidate_ids,
+        "bridge_durations": request.bridge_duration_seconds,
+        "custom_bridges": [
+            candidate.model_dump(mode="json") for candidate in request.bridge_candidates
+        ],
+        "configuration": config.model_dump(mode="json"),
+    }
     run_id = "ltx-" + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:16]
     run_dir = request.output_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -477,6 +492,9 @@ def render_ltx_views(
         )
         coverage[str(view.source_path)] = "included_as_native_landscape_ltx_source_view"
     candidates = {candidate.candidate_id: candidate for candidate in _bridges()}
+    candidates.update(
+        {candidate.candidate_id: candidate for candidate in request.bridge_candidates}
+    )
     unknown_candidates = sorted(set(request.bridge_candidate_ids) - set(candidates))
     if unknown_candidates:
         raise ValueError(f"Unknown LTX bridge candidate(s): {', '.join(unknown_candidates)}")
@@ -829,7 +847,7 @@ def plan_ltx_timed_reel(
     render_manifest_path: Path,
     bridge_candidate_ids: list[str],
     total_duration_seconds: float,
-    bridge_duration_seconds: float,
+    bridge_duration_seconds: float | dict[str, float],
     output_dir: Path,
 ) -> LtxTimedReelPlan:
     """Allocate a delivery length across user-selected bridges and their follow-on shots."""
@@ -838,8 +856,26 @@ def plan_ltx_timed_reel(
     )
     if not 8.0 <= total_duration_seconds <= 120.0:
         raise ValueError("Total reel duration must be between 8 and 120 seconds.")
-    if not 2.0 <= bridge_duration_seconds <= 4.0:
-        raise ValueError("Each requested bridge duration must be between 2 and 4 seconds.")
+    if isinstance(bridge_duration_seconds, dict):
+        default_bridge_duration = 3.0
+        bridge_duration_by_id = {
+            candidate_id: bridge_duration_seconds.get(candidate_id, default_bridge_duration)
+            for candidate_id in bridge_candidate_ids
+        }
+        overrides = dict(bridge_duration_seconds)
+    else:
+        default_bridge_duration = bridge_duration_seconds
+        bridge_duration_by_id = {
+            candidate_id: bridge_duration_seconds for candidate_id in bridge_candidate_ids
+        }
+        overrides = {}
+    invalid_durations = [
+        duration
+        for duration in bridge_duration_by_id.values()
+        if not 2.0 <= duration <= 6.0
+    ]
+    if invalid_durations:
+        raise ValueError("Each requested bridge duration must be between 2 and 6 seconds.")
     if not bridge_candidate_ids:
         raise ValueError("Select at least one compatible LTX bridge.")
     if len(set(bridge_candidate_ids)) != len(bridge_candidate_ids):
@@ -857,23 +893,24 @@ def plan_ltx_timed_reel(
     missing_clips = sorted(set(follow_on_names) - set(clips))
     if missing_clips:
         raise ValueError(f"Bridge follow-on source clip is missing: {', '.join(missing_clips)}")
-    shot_budget = total_duration_seconds - bridge_duration_seconds * len(selected_bridges)
-    if shot_budget < 1.5 * len(follow_on_names):
+    shot_budget = total_duration_seconds - sum(bridge_duration_by_id.values())
+    if shot_budget < 0.75 * len(follow_on_names):
         raise ValueError(
-            "Requested duration leaves less than 1.5 seconds per follow-on shot. "
+            "Requested duration leaves less than 0.75 seconds per follow-on shot. "
             "Use fewer bridges or increase the total reel duration."
         )
     allocated_shot_duration = shot_budget / len(follow_on_names)
     items: list[LtxTimedReelItem] = []
     for index, bridge in enumerate(selected_bridges):
+        bridge_duration = bridge_duration_by_id[bridge.candidate_id]
         items.append(
             LtxTimedReelItem(
                 kind="ltx_bridge",
                 name=bridge.candidate_id,
                 input_path=bridge.generated_path,
                 source_duration_seconds=bridge.video.duration_seconds,
-                delivery_duration_seconds=bridge_duration_seconds,
-                playback_speed=bridge.video.duration_seconds / bridge_duration_seconds,
+                delivery_duration_seconds=bridge_duration,
+                playback_speed=bridge.video.duration_seconds / bridge_duration,
                 transition_before="opening" if index == 0 else "intentional_cut",
             )
         )
@@ -894,7 +931,7 @@ def plan_ltx_timed_reel(
             "render": manifest.run_id,
             "bridges": bridge_candidate_ids,
             "total": total_duration_seconds,
-            "bridge_duration": bridge_duration_seconds,
+            "bridge_durations": bridge_duration_by_id,
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -905,17 +942,94 @@ def plan_ltx_timed_reel(
         created_at=datetime.now(UTC),
         render_manifest_path=str(render_manifest_path),
         requested_total_duration_seconds=total_duration_seconds,
-        requested_bridge_duration_seconds=bridge_duration_seconds,
+        requested_bridge_duration_seconds=default_bridge_duration,
+        requested_bridge_duration_overrides=overrides,
         items=items,
         output_duration_seconds=sum(item.delivery_duration_seconds for item in items),
         optimization_notes=[
-            "Each compatible LTX bridge receives the user-selected duration.",
+            "Each compatible LTX bridge receives its user-selected duration.",
             "Remaining time is distributed evenly across bridge follow-on shots.",
             "Unrelated areas use intentional cuts, never an invented spatial bridge.",
             "Playback rates are recorded so delivery duration remains exact.",
+            "Shorter remaining shot budgets intentionally make follow-on camera motion faster.",
         ],
     )
     run_dir = output_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "plan.json").write_text(plan.model_dump_json(indent=2), encoding="utf-8")
     return plan
+
+
+def assemble_ltx_timed_reel(plan_path: Path, output_dir: Path) -> LtxTimedReelManifest:
+    """Render an exact, bridge-aware portrait timeline from a saved pacing plan."""
+    plan = LtxTimedReelPlan.model_validate_json(plan_path.read_text(encoding="utf-8"))
+    if not plan.items:
+        raise ValueError("The timed reel plan has no timeline items.")
+    missing = [item.input_path for item in plan.items if not Path(item.input_path).is_file()]
+    if missing:
+        raise FileNotFoundError(f"Timed reel input is missing: {', '.join(missing)}")
+    require_ffmpeg()
+    payload = json.dumps(plan.model_dump(mode="json"), sort_keys=True).encode()
+    run_id = f"ltx-timed-render-{hashlib.sha256(payload).hexdigest()[:16]}"
+    run_dir = output_dir / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    output = run_dir / "reel.mp4"
+    command = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error"]
+    for item in plan.items:
+        command.extend(["-i", item.input_path])
+    filters: list[str] = []
+    timeline_labels: list[str] = []
+    for index, item in enumerate(plan.items):
+        filters.extend(
+            [
+                f"[{index}:v]trim=duration={item.source_duration_seconds:.6f},"
+                f"setpts=PTS/{item.playback_speed:.9f},split=2[fgraw{index}][bgraw{index}]",
+                f"[bgraw{index}]scale=1080:1920:force_original_aspect_ratio=increase,"
+                f"crop=1080:1920,boxblur=20:10[bg{index}]",
+                f"[fgraw{index}]scale=1080:608:force_original_aspect_ratio=decrease[fg{index}]",
+                f"[bg{index}][fg{index}]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v{index}]",
+            ]
+        )
+        timeline_labels.append(f"[v{index}]")
+    output_frames = round(plan.output_duration_seconds * 30)
+    filters.append(
+        f"{''.join(timeline_labels)}concat=n={len(plan.items)}:v=1:a=0,"
+        f"fps=30,trim=end_frame={output_frames},setpts=PTS-STARTPTS[video]"
+    )
+    command.extend(
+        [
+            "-filter_complex",
+            ";".join(filters),
+            "-map",
+            "[video]",
+            "-r",
+            "30",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "17",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            str(output),
+        ]
+    )
+    run_ffmpeg(command)
+    video = probe_video(output)
+    if abs(video.duration_seconds - plan.output_duration_seconds) > 0.04:
+        raise ValueError("Timed reel render duration does not match its requested plan.")
+    manifest = LtxTimedReelManifest(
+        run_id=run_id,
+        created_at=datetime.now(UTC),
+        plan_path=str(plan_path),
+        items=plan.items,
+        output_path=str(output),
+        output_sha256=_sha256(output),
+        video=video,
+    )
+    (run_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    return manifest

@@ -261,6 +261,7 @@ class LtxRenderRequest(BaseModel):
     source_views: list[LtxSourceView] = Field(min_length=1, max_length=6)
     bridge_candidate_ids: list[str] = Field(default_factory=list)
     bridge_duration_seconds: dict[str, float] = Field(default_factory=dict)
+    bridge_candidates: list[LtxBridgeCandidate] = Field(default_factory=list)
     configuration: LtxComfyUiConfig
     output_dir: Path = Path("runs/ltx-videos")
 
@@ -275,6 +276,9 @@ class LtxRenderRequest(BaseModel):
             raise ValueError(
                 "Bridge duration can be supplied only for a selected bridge candidate."
             )
+        custom_ids = [candidate.candidate_id for candidate in self.bridge_candidates]
+        if len(set(custom_ids)) != len(custom_ids):
+            raise ValueError("Custom LTX bridge candidate IDs must be distinct.")
         return self
 
 
@@ -306,7 +310,7 @@ class LtxBridgeCandidate(BaseModel):
     kind: LtxBridgeKind
     from_view: str
     to_view: str
-    duration_seconds: float = Field(default=3.0, ge=2.0, le=4.0)
+    duration_seconds: float = Field(default=3.0, ge=2.0, le=6.0)
     prompt: str
     decision: VideoDecision = VideoDecision.QUEUED_FOR_HUMAN_REVIEW
     reason: str
@@ -402,7 +406,25 @@ class LtxTimedReelPlan(BaseModel):
     created_at: datetime
     render_manifest_path: str
     requested_total_duration_seconds: float = Field(ge=8.0, le=120.0)
-    requested_bridge_duration_seconds: float = Field(ge=2.0, le=4.0)
+    requested_bridge_duration_seconds: float = Field(ge=2.0, le=6.0)
+    requested_bridge_duration_overrides: dict[str, float] = Field(default_factory=dict)
     items: list[LtxTimedReelItem] = Field(min_length=2)
     output_duration_seconds: float = Field(gt=0)
     optimization_notes: list[str]
+
+
+class LtxTimedReelManifest(BaseModel):
+    """Rendered candidate delivery from an auditable LTX timed-reel plan."""
+
+    phase: str = "phase_5_ltx_timed_reel_assembly"
+    run_id: str
+    created_at: datetime
+    plan_path: str
+    items: list[LtxTimedReelItem]
+    output_path: str
+    output_sha256: str
+    video: VideoMetadata
+    foreground_treatment: str = (
+        "Complete native 16:9 landscape foreground centered over a blurred portrait background; "
+        "foreground property is never cropped."
+    )

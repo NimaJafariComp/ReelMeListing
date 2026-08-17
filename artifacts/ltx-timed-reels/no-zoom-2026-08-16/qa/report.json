@@ -1,0 +1,176 @@
+{
+  "report_id": "ltx-quality-3851d27bdbefee78",
+  "phase": "phase_5_ltx_comfyui_qa",
+  "created_at": "2026-08-17T04:18:59.789276Z",
+  "render_manifest_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\manifest.json",
+  "clips": [
+    {
+      "name": "03-front-day-left",
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\03-front-day-left_00001_.webm",
+      "metrics": {
+        "frame_count": 89,
+        "duration_seconds": 2.966,
+        "mean_frame_difference": 0.9627499050564235,
+        "frame_difference_cv": 0.27096190737279363,
+        "minimum_edge_f1_to_hero": 0.19492788333599448,
+        "maximum_black_pixel_fraction": 0.008756849500868056
+      },
+      "reason_codes": [
+        "structural_edge_drift_rejected"
+      ],
+      "decision": "rejected"
+    },
+    {
+      "name": "05-front-day-wide",
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\05-front-day-wide_00001_.webm",
+      "metrics": {
+        "frame_count": 89,
+        "duration_seconds": 2.966,
+        "mean_frame_difference": 2.4417773352728953,
+        "frame_difference_cv": 0.130814288420771,
+        "minimum_edge_f1_to_hero": 0.17397969239304198,
+        "maximum_black_pixel_fraction": 0.021419949001736112
+      },
+      "reason_codes": [
+        "structural_edge_drift_rejected"
+      ],
+      "decision": "rejected"
+    },
+    {
+      "name": "02-covered-patio",
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\02-covered-patio_00001_.webm",
+      "metrics": {
+        "frame_count": 89,
+        "duration_seconds": 2.966,
+        "mean_frame_difference": 1.7770989928582706,
+        "frame_difference_cv": 0.19968653624265975,
+        "minimum_edge_f1_to_hero": 0.14507500142588262,
+        "maximum_black_pixel_fraction": 0.025173611111111112
+      },
+      "reason_codes": [
+        "structural_edge_drift_rejected"
+      ],
+      "decision": "rejected"
+    },
+    {
+      "name": "04-backyard-patio",
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\04-backyard-patio_00001_.webm",
+      "metrics": {
+        "frame_count": 89,
+        "duration_seconds": 2.966,
+        "mean_frame_difference": 2.234399525806157,
+        "frame_difference_cv": 0.15119931384680338,
+        "minimum_edge_f1_to_hero": 0.14172188298471267,
+        "maximum_black_pixel_fraction": 0.025872124565972224
+      },
+      "reason_codes": [
+        "structural_edge_drift_rejected"
+      ],
+      "decision": "rejected"
+    },
+    {
+      "name": "01-front-twilight",
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\01-front-twilight_00001_.webm",
+      "metrics": {
+        "frame_count": 89,
+        "duration_seconds": 2.966,
+        "mean_frame_difference": 1.6164855186385338,
+        "frame_difference_cv": 0.16827727421890457,
+        "minimum_edge_f1_to_hero": 0.14983131834232533,
+        "maximum_black_pixel_fraction": 0.028516981336805556
+      },
+      "reason_codes": [
+        "structural_edge_drift_rejected"
+      ],
+      "decision": "rejected"
+    }
+  ],
+  "bridge_candidates": [
+    {
+      "candidate_id": "front-left-to-front-wide",
+      "kind": "spatial_overlap",
+      "from_view": "03-front-day-left",
+      "to_view": "05-front-day-wide",
+      "duration_seconds": 3.0,
+      "prompt": "User-selected compatible front pair. Generate a restrained lateral or forward camera continuation through the shared front geometry.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject if roof, windows, driveway, trees, or wall geometry bends or shifts."
+    },
+    {
+      "candidate_id": "patio-to-backyard",
+      "kind": "spatial_overlap",
+      "from_view": "02-covered-patio",
+      "to_view": "04-backyard-patio",
+      "duration_seconds": 3.0,
+      "prompt": "User-selected adjacent patio/backyard pair. Generate a restrained camera move only through visibly compatible outdoor geometry.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject unless overlap is obvious and all geometry remains coherent; use a deliberate cut otherwise."
+    },
+    {
+      "candidate_id": "front-day-to-twilight",
+      "kind": "lighting_only",
+      "from_view": "05-front-day-wide",
+      "to_view": "01-front-twilight",
+      "duration_seconds": 3.0,
+      "prompt": "User-selected lighting-only pair. Freeze the front framing and geometry; change only daylight, sky color, and practical/interior lighting.",
+      "decision": "queued_for_human_review",
+      "reason": "Human-review candidate only: reject if the house, driveway, trees, windows, or patio shift."
+    }
+  ],
+  "bridges": [
+    {
+      "candidate_id": "front-left-to-front-wide",
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-left-to-front-wide_00001_.webm",
+      "metrics": {
+        "frame_count": 153,
+        "duration_seconds": 5.1,
+        "mean_frame_difference": 5.929687165377432,
+        "frame_difference_cv": 0.27744938611829917,
+        "minimum_edge_f1_to_hero": 0.0,
+        "maximum_black_pixel_fraction": 0.023957994249131944
+      },
+      "endpoint_edge_f1": 0.39275201651439273,
+      "reason_codes": [
+        "bridge_endpoint_structure_rejected"
+      ],
+      "decision": "rejected"
+    },
+    {
+      "candidate_id": "patio-to-backyard",
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\patio-to-backyard_00001_.webm",
+      "metrics": {
+        "frame_count": 89,
+        "duration_seconds": 2.966,
+        "mean_frame_difference": 9.546328245991408,
+        "frame_difference_cv": 0.463287909335656,
+        "minimum_edge_f1_to_hero": 0.0,
+        "maximum_black_pixel_fraction": 0.031731499565972224
+      },
+      "endpoint_edge_f1": 0.4050206226577058,
+      "reason_codes": [
+        "bridge_endpoint_structure_rejected",
+        "tail_ghost_or_rollback_rejected"
+      ],
+      "decision": "rejected"
+    },
+    {
+      "candidate_id": "front-day-to-twilight",
+      "generated_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-day-to-twilight_00001_.webm",
+      "metrics": {
+        "frame_count": 89,
+        "duration_seconds": 2.966,
+        "mean_frame_difference": 1.8549460786761662,
+        "frame_difference_cv": 0.20433519116047508,
+        "minimum_edge_f1_to_hero": 0.0,
+        "maximum_black_pixel_fraction": 0.039499918619791664
+      },
+      "endpoint_edge_f1": 0.414074290991823,
+      "reason_codes": [
+        "bridge_endpoint_structure_rejected"
+      ],
+      "decision": "rejected"
+    }
+  ],
+  "decision": "rejected",
+  "review_worksheet_path": "runs\\ltx-quality\\ltx-quality-3851d27bdbefee78\\review.csv"
+}

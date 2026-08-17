@@ -1,0 +1,77 @@
+{
+  "phase": "phase_5_ltx_timed_reel_plan",
+  "run_id": "ltx-timed-reel-e4842dedf4da298a",
+  "created_at": "2026-08-17T04:14:23.200255Z",
+  "render_manifest_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\manifest.json",
+  "requested_total_duration_seconds": 15.0,
+  "requested_bridge_duration_seconds": 3.0,
+  "requested_bridge_duration_overrides": {
+    "front-left-to-front-wide": 5.0,
+    "patio-to-backyard": 3.0,
+    "front-day-to-twilight": 3.0
+  },
+  "items": [
+    {
+      "kind": "ltx_bridge",
+      "name": "front-left-to-front-wide",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-left-to-front-wide_00001_.webm",
+      "source_duration_seconds": 5.1,
+      "delivery_duration_seconds": 5.0,
+      "playback_speed": 1.02,
+      "transition_before": "opening"
+    },
+    {
+      "kind": "source_clip",
+      "name": "05-front-day-wide",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\05-front-day-wide_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 1.3333333333333333,
+      "playback_speed": 2.2245000000000004,
+      "transition_before": "continuous"
+    },
+    {
+      "kind": "ltx_bridge",
+      "name": "patio-to-backyard",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\patio-to-backyard_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.0,
+      "playback_speed": 0.9886666666666667,
+      "transition_before": "intentional_cut"
+    },
+    {
+      "kind": "source_clip",
+      "name": "04-backyard-patio",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\04-backyard-patio_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 1.3333333333333333,
+      "playback_speed": 2.2245000000000004,
+      "transition_before": "continuous"
+    },
+    {
+      "kind": "ltx_bridge",
+      "name": "front-day-to-twilight",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\bridges\\front-day-to-twilight_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 3.0,
+      "playback_speed": 0.9886666666666667,
+      "transition_before": "intentional_cut"
+    },
+    {
+      "kind": "source_clip",
+      "name": "01-front-twilight",
+      "input_path": "runs\\ltx-videos\\ltx-3851d27bdbefee78\\01-front-twilight_00001_.webm",
+      "source_duration_seconds": 2.966,
+      "delivery_duration_seconds": 1.3333333333333333,
+      "playback_speed": 2.2245000000000004,
+      "transition_before": "continuous"
+    }
+  ],
+  "output_duration_seconds": 15.0,
+  "optimization_notes": [
+    "Each compatible LTX bridge receives its user-selected duration.",
+    "Remaining time is distributed evenly across bridge follow-on shots.",
+    "Unrelated areas use intentional cuts, never an invented spatial bridge.",
+    "Playback rates are recorded so delivery duration remains exact.",
+    "Shorter remaining shot budgets intentionally make follow-on camera motion faster."
+  ]
+}

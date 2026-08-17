@@ -130,9 +130,39 @@ uv run --no-sync python -m listing_to_reel video plan-ltx-reel `
   --bridge front-day-to-twilight
 ```
 
-Bridge duration must be 2–4 seconds. Select only pairs with compatible visual overlap; a
+Use `--bridge-duration candidate=seconds` when one compatible transition needs a different
+pace. This makes a 15-second reel with a five-second front transition and three-second remaining
+transitions:
+
+```powershell
+uv run --no-sync python -m listing_to_reel video plan-ltx-reel `
+  --render-manifest runs/ltx-videos/<run-id>/manifest.json `
+  --total-seconds 15 `
+  --bridge-seconds 3 `
+  --bridge front-left-to-front-wide `
+  --bridge patio-to-backyard `
+  --bridge front-day-to-twilight `
+  --bridge-duration front-left-to-front-wide=5
+```
+
+Bridge duration must be 2–6 seconds. Select only pairs with compatible visual overlap; a
 front-to-backyard or otherwise unrelated change is planned as a deliberate cut, not an invented
 camera move.
+
+Render that saved plan—not merely source clips—into the final bridge-and-clip timeline:
+
+```powershell
+uv run --no-sync python -m listing_to_reel video assemble-ltx-timed-reel `
+  --plan runs/ltx-timed-reels/<plan-run-id>/plan.json
+```
+
+For an arbitrary compatible pair from the supplied source views, define it explicitly at render
+time. It remains queued for human review and is never auto-accepted:
+
+```powershell
+--bridge-pair patio-to-yard=02-covered-patio,04-backyard-patio,spatial_overlap `
+--bridge-candidate patio-to-yard=3
+```
 
 The render manifest records the exact ComfyUI node graph, pinned model/encoder/VAE names,
 prompt, source hashes, coverage, output hashes, and generated clips. QA writes a mandatory

@@ -1,0 +1,9 @@
+kind,name,path_or_candidate,decision,reviewer,notes
+clip,03-front-day-left,runs\ltx-videos\ltx-3851d27bdbefee78\03-front-day-left_00001_.webm,,,
+clip,05-front-day-wide,runs\ltx-videos\ltx-3851d27bdbefee78\05-front-day-wide_00001_.webm,,,
+clip,02-covered-patio,runs\ltx-videos\ltx-3851d27bdbefee78\02-covered-patio_00001_.webm,,,
+clip,04-backyard-patio,runs\ltx-videos\ltx-3851d27bdbefee78\04-backyard-patio_00001_.webm,,,
+clip,01-front-twilight,runs\ltx-videos\ltx-3851d27bdbefee78\01-front-twilight_00001_.webm,,,
+bridge,front-left-to-front-wide,runs\ltx-videos\ltx-3851d27bdbefee78\bridges\front-left-to-front-wide_00001_.webm,,,Review endpoint geometry and temporal continuity before approval.
+bridge,patio-to-backyard,runs\ltx-videos\ltx-3851d27bdbefee78\bridges\patio-to-backyard_00001_.webm,,,Review endpoint geometry and temporal continuity before approval.
+bridge,front-day-to-twilight,runs\ltx-videos\ltx-3851d27bdbefee78\bridges\front-day-to-twilight_00001_.webm,,,Review endpoint geometry and temporal continuity before approval.

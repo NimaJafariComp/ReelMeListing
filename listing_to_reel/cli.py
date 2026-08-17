@@ -20,6 +20,7 @@ from listing_to_reel.media.models import ReelRequest
 from listing_to_reel.media.reel import assemble_reel
 from listing_to_reel.video.ltx_comfyui import (
     assemble_ltx_portrait_reel,
+    assemble_ltx_timed_reel,
     evaluate_ltx_render,
     load_ltx_comfyui_config,
     plan_ltx_timed_reel,
@@ -28,6 +29,8 @@ from listing_to_reel.video.ltx_comfyui import (
 from listing_to_reel.video.models import (
     HeroVideoRequest,
     InterpolationConfig,
+    LtxBridgeCandidate,
+    LtxBridgeKind,
     LtxMotionTreatment,
     LtxRenderRequest,
     LtxSourceView,
@@ -229,8 +232,13 @@ def render_ltx(
         "--bridge-candidate",
         help=(
             "Explicitly selected compatible pair, optionally with its invented duration in "
-            "seconds (for example patio-to-backyard=3.5). Valid range: 2–4 seconds."
+            "seconds (for example patio-to-backyard=3.5). Valid range: 2–6 seconds."
         ),
+    ),
+    bridge_pair: list[str] = typer.Option(
+        [],
+        "--bridge-pair",
+        help="Custom pair as id=from_view,to_view,spatial_overlap|lighting_only.",
     ),
     config: Path = typer.Option(
         Path("configs/ltx_comfyui.yaml"), "--config", exists=True, readable=True
@@ -259,6 +267,34 @@ def render_ltx(
             raise typer.BadParameter(f"Unknown LTX treatment; use one of: {choices}.") from error
     bridge_candidate_ids: list[str] = []
     bridge_duration_seconds: dict[str, float] = {}
+    custom_bridge_candidates: list[LtxBridgeCandidate] = []
+    for value in bridge_pair:
+        candidate_id, separator, pair_text = value.partition("=")
+        parts = pair_text.split(",")
+        if not candidate_id or not separator or len(parts) != 3:
+            raise typer.BadParameter(
+                "Each --bridge-pair must be id=from_view,to_view,spatial_overlap|lighting_only."
+            )
+        from_view, to_view, kind_text = parts
+        try:
+            kind = LtxBridgeKind(kind_text)
+        except ValueError as error:
+            raise typer.BadParameter(
+                "Bridge kind must be spatial_overlap or lighting_only."
+            ) from error
+        custom_bridge_candidates.append(
+            LtxBridgeCandidate(
+                candidate_id=candidate_id,
+                kind=kind,
+                from_view=from_view,
+                to_view=to_view,
+                prompt="User-selected compatible source-view pair; human-review candidate only.",
+                reason=(
+                    "Reject if architecture, landscaping, perspective, or geometry changes; "
+                    "use an intentional cut when overlap is not sufficient."
+                ),
+            )
+        )
     for value in bridge_candidate:
         candidate_id, separator, duration_text = value.partition("=")
         if not candidate_id:
@@ -268,8 +304,8 @@ def render_ltx(
                 duration_seconds = float(duration_text)
             except ValueError as error:
                 raise typer.BadParameter("Bridge duration must be a number of seconds.") from error
-            if not 2.0 <= duration_seconds <= 4.0:
-                raise typer.BadParameter("Bridge duration must be between 2 and 4 seconds.")
+            if not 2.0 <= duration_seconds <= 6.0:
+                raise typer.BadParameter("Bridge duration must be between 2 and 6 seconds.")
             bridge_duration_seconds[candidate_id] = duration_seconds
         bridge_candidate_ids.append(candidate_id)
     manifest = render_ltx_views(
@@ -278,6 +314,7 @@ def render_ltx(
             source_views=source_views,
             bridge_candidate_ids=bridge_candidate_ids,
             bridge_duration_seconds=bridge_duration_seconds,
+            bridge_candidates=custom_bridge_candidates,
             configuration=load_ltx_comfyui_config(config),
             output_dir=output_dir,
         )
@@ -318,7 +355,12 @@ def assemble_ltx(
 def plan_ltx_reel(
     render_manifest: Path = typer.Option(..., "--render-manifest", exists=True, readable=True),
     total_seconds: float = typer.Option(20.0, "--total-seconds", min=8.0, max=120.0),
-    bridge_seconds: float = typer.Option(3.0, "--bridge-seconds", min=2.0, max=4.0),
+    bridge_seconds: float = typer.Option(3.0, "--bridge-seconds", min=2.0, max=6.0),
+    bridge_duration: list[str] = typer.Option(
+        [],
+        "--bridge-duration",
+        help="Optional per-bridge override as candidate=seconds; valid range: 2–6 seconds.",
+    ),
     bridge: list[str] = typer.Option(
         ...,
         "--bridge",
@@ -329,14 +371,44 @@ def plan_ltx_reel(
     ),
 ) -> None:
     """Plan exact reel pacing from a desired total length and bridge duration."""
+    duration_overrides: dict[str, float] = {}
+    for value in bridge_duration:
+        candidate_id, separator, duration_text = value.partition("=")
+        if not candidate_id or not separator:
+            raise typer.BadParameter("Each --bridge-duration must be candidate=seconds.")
+        try:
+            duration = float(duration_text)
+        except ValueError as error:
+            raise typer.BadParameter("Bridge duration must be a number of seconds.") from error
+        if not 2.0 <= duration <= 6.0:
+            raise typer.BadParameter("Bridge duration must be between 2 and 6 seconds.")
+        duration_overrides[candidate_id] = duration
+    unknown_overrides = set(duration_overrides) - set(bridge)
+    if unknown_overrides:
+        raise typer.BadParameter(
+            "Every --bridge-duration must name a selected --bridge: "
+            + ", ".join(sorted(unknown_overrides))
+        )
     plan = plan_ltx_timed_reel(
         render_manifest,
         bridge,
         total_seconds,
-        bridge_seconds,
+        duration_overrides or bridge_seconds,
         output_dir,
     )
     typer.echo(plan.model_dump_json(indent=2))
+
+
+@video_app.command("assemble-ltx-timed-reel")
+def assemble_ltx_timed_reel_command(
+    plan: Path = typer.Option(..., "--plan", exists=True, readable=True),
+    output_dir: Path = typer.Option(
+        Path("runs/ltx-timed-reels"), help="Ignored rendered timed-reel output directory."
+    ),
+) -> None:
+    """Render a saved bridge-and-clip pacing plan into a complete portrait candidate reel."""
+    manifest = assemble_ltx_timed_reel(plan, output_dir)
+    typer.echo(manifest.model_dump_json(indent=2))
 
 
 @video_app.command("generate")
