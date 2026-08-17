@@ -1,0 +1,11 @@
+{
+  "phase": "phase_4_final_decision",
+  "created_at": "2026-08-16T23:50:33.375888Z",
+  "evaluation_report_path": "runs/evaluations/quality-a97e96b8ba7b7abd/report.json",
+  "edit_run_id": "edit-a97e96b8ba7b7abd",
+  "decision": "accepted",
+  "selected_candidate_index": 2,
+  "reviewer": "project_owner",
+  "notes": "Approved as the premium warm-golden-hour hero image for Phase 5.",
+  "reason_codes": []
+}

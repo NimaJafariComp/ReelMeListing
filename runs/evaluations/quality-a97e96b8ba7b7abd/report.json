@@ -1,0 +1,64 @@
+{
+  "report_id": "quality-a97e96b8ba7b7abd",
+  "phase": "phase_4_evaluation",
+  "evaluator_version": "candidate-evaluation-v1",
+  "created_at": "2026-08-16T23:49:07.427050Z",
+  "edit_run_manifest_path": "runs/edits/edit-a97e96b8ba7b7abd/manifest.json",
+  "edit_run_id": "edit-a97e96b8ba7b7abd",
+  "source_path": "data/source/unsplash_exteriors/001.jpg",
+  "source_sha256": "574fd8d0144c5c9454a3e9aa54546c2d172603992319d9756bf0ac8b3d745848",
+  "configuration": {
+    "analysis_max_dimension": 768,
+    "edge_f1_warning": 0.4,
+    "edge_f1_reject": 0.25,
+    "blur_ratio_warning": 0.55,
+    "blur_ratio_reject": 0.25,
+    "black_pixel_reject_fraction": 0.25,
+    "vertical_line_delta_warning_degrees": 4.0,
+    "min_edge_pixels": 200
+  },
+  "candidates": [
+    {
+      "candidate_index": 1,
+      "candidate_path": "runs/edits/edit-a97e96b8ba7b7abd/candidates/candidate-01.jpg",
+      "candidate_sha256": "bebf77211519fdbfab436a266b73390b369bae0fa690e7bfabf742dc23c9a486",
+      "metrics": {
+        "edge_f1": 0.9089716230753987,
+        "source_edge_pixels": 52523,
+        "candidate_edge_pixels": 50846,
+        "blur_ratio": 0.8622354874684881,
+        "source_blur_variance": 1208.201396849829,
+        "candidate_blur_variance": 1041.7541203729206,
+        "black_pixel_fraction": 0.03682228370949074,
+        "mean_luminance_delta": 15.221935130931712,
+        "vertical_line_delta_degrees": 0.1711803768241964
+      },
+      "reason_codes": [],
+      "score": 0.9054185031559375,
+      "decision": "queued_for_human_review"
+    },
+    {
+      "candidate_index": 2,
+      "candidate_path": "runs/edits/edit-a97e96b8ba7b7abd/candidates/candidate-02.jpg",
+      "candidate_sha256": "36c36723e1fe044274bb85aa1b4fbe1cabad9a2fbdeca09f8a7da2165d465c3a",
+      "metrics": {
+        "edge_f1": 0.9108222350695313,
+        "source_edge_pixels": 52523,
+        "candidate_edge_pixels": 51888,
+        "blur_ratio": 0.8673303775001197,
+        "source_blur_variance": 1208.201396849829,
+        "candidate_blur_variance": 1047.9097736259341,
+        "black_pixel_fraction": 0.03544334129050926,
+        "mean_luminance_delta": 15.224256727430543,
+        "vertical_line_delta_degrees": 0.18717138380867482
+      },
+      "reason_codes": [],
+      "score": 0.9080094342231723,
+      "decision": "queued_for_human_review"
+    }
+  ],
+  "recommended_candidate_index": 2,
+  "run_decision": "queued_for_human_review",
+  "reason_codes": [],
+  "review_worksheet_path": "runs/evaluations/quality-a97e96b8ba7b7abd/review.csv"
+}

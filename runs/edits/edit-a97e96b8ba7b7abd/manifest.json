@@ -1,0 +1,65 @@
+{
+  "run_id": "edit-a97e96b8ba7b7abd",
+  "phase": "phase_3_baseline_image_editing",
+  "created_at": "2026-08-16T23:48:57.439126Z",
+  "source_path": "data/source/unsplash_exteriors/001.jpg",
+  "source_sha256": "574fd8d0144c5c9454a3e9aa54546c2d172603992319d9756bf0ac8b3d745848",
+  "input_quality_report_path": "runs/input-quality/input-574fd8d0144c5c94/report.json",
+  "instruction": "Transform this property photo to photorealistic premium warm golden-hour dusk. Use a softly darkening amber-pink sky, subtle warm exterior illumination, warm light in existing windows, and gentle realistic pool reflections. Keep exact house geometry, rooflines, windows, facade, pool, driveway, landscaping, and layout. Do not add or remove features.",
+  "configuration": {
+    "provider": "diffusers",
+    "adapter": "instruct_pix2pix",
+    "model_id": "timbrooks/instruct-pix2pix",
+    "model_revision": null,
+    "scheduler": "euler_ancestral",
+    "torch_dtype": "float32",
+    "num_inference_steps": 40,
+    "guidance_scale": 8.5,
+    "image_guidance_scale": 1.15,
+    "candidate_count": 2,
+    "max_dimension": 768,
+    "output_quality": 95
+  },
+  "requested_model_revision": null,
+  "resolved_model_revision": "31519b5cb02a7fd89b906d88731cd4d6a7bbf88d",
+  "runtime_profile_name": "local_mps",
+  "runtime_profile": {
+    "device": "mps",
+    "image_resolution": 512,
+    "batch_size": 1,
+    "attention_slicing": true,
+    "image_editor_mode": "preview_only",
+    "video_generation_enabled": false,
+    "benchmark_authority": false
+  },
+  "environment": {
+    "python_version": "3.12.13",
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "machine": "arm64",
+    "git_commit_sha": "f73f26662e05ad0f33311b6c72eac0473aa63a1c",
+    "torch_version": "2.13.0",
+    "capabilities": {
+      "mps_available": true,
+      "cuda_available": false
+    }
+  },
+  "candidates": [
+    {
+      "candidate_index": 1,
+      "seed": 42,
+      "artifact_path": "runs/edits/edit-a97e96b8ba7b7abd/candidates/candidate-01.jpg",
+      "sha256": "bebf77211519fdbfab436a266b73390b369bae0fa690e7bfabf742dc23c9a486",
+      "wall_clock_seconds": 113.8499199580001,
+      "peak_device_memory_bytes": 5480919296
+    },
+    {
+      "candidate_index": 2,
+      "seed": 43,
+      "artifact_path": "runs/edits/edit-a97e96b8ba7b7abd/candidates/candidate-02.jpg",
+      "sha256": "36c36723e1fe044274bb85aa1b4fbe1cabad9a2fbdeca09f8a7da2165d465c3a",
+      "wall_clock_seconds": 114.39448700000003,
+      "peak_device_memory_bytes": 5481155072
+    }
+  ],
+  "acceptance_decision": "pending_phase_4_evaluation"
+}

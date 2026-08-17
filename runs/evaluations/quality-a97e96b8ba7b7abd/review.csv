@@ -1,0 +1,3 @@
+blind_candidate_id,candidate_path,decision,reviewer,notes
+C01,runs/edits/edit-a97e96b8ba7b7abd/candidates/candidate-01.jpg,rejected_by_human,project_owner,Not selected; Candidate 2 is the approved hero image.
+C02,runs/edits/edit-a97e96b8ba7b7abd/candidates/candidate-02.jpg,accepted_by_human,project_owner,Approved as the premium warm-golden-hour hero image for Phase 5.
