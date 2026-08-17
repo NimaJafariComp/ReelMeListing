@@ -274,3 +274,43 @@ def test_mocked_comfyui_ltx_render_and_human_review_qa(tmp_path: Path) -> None:
     assert Path(report.review_worksheet_path).is_file()
     assert reel.video.width == 1080
     assert reel.video.height == 1920
+
+
+def test_ltx_renders_only_explicitly_selected_three_second_bridge(tmp_path: Path) -> None:
+    front_left = tmp_path / "front-left.png"
+    front_wide = tmp_path / "front-wide.png"
+    Image.new("RGB", (320, 180), "#d8b084").save(front_left)
+    Image.new("RGB", (320, 180), "#d8b084").save(front_wide)
+    comfy_root = tmp_path / "comfy"
+    client = FakeComfyUiClient(comfy_root / "output")
+    request = LtxRenderRequest(
+        property_id="synthetic-simple-suburban-home",
+        source_views=[
+            LtxSourceView(
+                name="03-front-day-left",
+                source_path=front_left,
+                treatment=LtxMotionTreatment.LATERAL_GIMBAL,
+            ),
+            LtxSourceView(
+                name="05-front-day-wide",
+                source_path=front_wide,
+                treatment=LtxMotionTreatment.DOLLY_IN,
+            ),
+        ],
+        bridge_candidate_ids=["front-left-to-front-wide"],
+        bridge_duration_seconds={"front-left-to-front-wide": 3.5},
+        configuration=LtxComfyUiConfig(comfyui_root=comfy_root, model_revision="test-revision"),
+        output_dir=tmp_path / "runs",
+    )
+
+    manifest = render_ltx_views(request, client)
+
+    assert len(manifest.bridges) == 1
+    bridge = manifest.bridges[0]
+    assert bridge.duration_seconds == 3.5
+    assert bridge.from_view == "03-front-day-left"
+    assert bridge.to_view == "05-front-day-wide"
+    assert bridge.workflow["9"]["class_type"] == "LTXVAddGuide"
+    assert bridge.workflow["10"]["inputs"]["frame_idx"] == 88
+    assert bridge.workflow["19"]["class_type"] == "SaveWEBM"
+    assert Path(bridge.generated_path).is_file()

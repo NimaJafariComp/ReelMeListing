@@ -258,6 +258,8 @@ class LtxRenderRequest(BaseModel):
 
     property_id: str = Field(min_length=1)
     source_views: list[LtxSourceView] = Field(min_length=1, max_length=6)
+    bridge_candidate_ids: list[str] = Field(default_factory=list)
+    bridge_duration_seconds: dict[str, float] = Field(default_factory=dict)
     configuration: LtxComfyUiConfig
     output_dir: Path = Path("runs/ltx-videos")
 
@@ -266,6 +268,12 @@ class LtxRenderRequest(BaseModel):
         paths = [view.source_path for view in self.source_views]
         if len(set(paths)) != len(paths):
             raise ValueError("Each LTX source view must be distinct.")
+        if len(set(self.bridge_candidate_ids)) != len(self.bridge_candidate_ids):
+            raise ValueError("Each selected LTX bridge candidate must be distinct.")
+        if set(self.bridge_duration_seconds) - set(self.bridge_candidate_ids):
+            raise ValueError(
+                "Bridge duration can be supplied only for a selected bridge candidate."
+            )
         return self
 
 
@@ -297,10 +305,23 @@ class LtxBridgeCandidate(BaseModel):
     kind: LtxBridgeKind
     from_view: str
     to_view: str
-    duration_seconds: float = Field(ge=0.5, le=1.0)
+    duration_seconds: float = Field(default=3.0, ge=2.0, le=4.0)
     prompt: str
     decision: VideoDecision = VideoDecision.QUEUED_FOR_HUMAN_REVIEW
     reason: str
+
+
+class LtxGeneratedBridge(LtxBridgeCandidate):
+    """A user-selected, multi-conditioned LTX transition awaiting human approval."""
+
+    from_source_path: str
+    from_source_sha256: str
+    to_source_path: str
+    to_source_sha256: str
+    workflow: dict[str, object]
+    generated_path: str
+    generated_sha256: str
+    video: VideoMetadata
 
 
 class LtxRenderManifest(BaseModel):
@@ -312,6 +333,7 @@ class LtxRenderManifest(BaseModel):
     configuration: LtxComfyUiConfig
     clips: list[LtxGeneratedClip]
     bridge_candidates: list[LtxBridgeCandidate]
+    bridges: list[LtxGeneratedBridge] = Field(default_factory=list)
     source_coverage: dict[str, str]
     qa_status: VideoDecision = VideoDecision.QUEUED_FOR_HUMAN_REVIEW
 
@@ -324,6 +346,15 @@ class LtxClipQualityReport(BaseModel):
     decision: VideoDecision
 
 
+class LtxBridgeQualityReport(BaseModel):
+    candidate_id: str
+    generated_path: str
+    metrics: TemporalMetrics
+    endpoint_edge_f1: float
+    reason_codes: list[str]
+    decision: VideoDecision
+
+
 class LtxQualityReport(BaseModel):
     report_id: str
     phase: str = "phase_5_ltx_comfyui_qa"
@@ -331,6 +362,7 @@ class LtxQualityReport(BaseModel):
     render_manifest_path: str
     clips: list[LtxClipQualityReport]
     bridge_candidates: list[LtxBridgeCandidate]
+    bridges: list[LtxBridgeQualityReport] = Field(default_factory=list)
     decision: VideoDecision
     review_worksheet_path: str
 

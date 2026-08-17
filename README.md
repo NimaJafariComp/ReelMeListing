@@ -104,7 +104,10 @@ uv run --no-sync python -m listing_to_reel video render-ltx `
   --source 05-front-day-wide=data/source/synthetic_simple_suburban_home/05-front-day-wide.png,gentle_dolly_in `
   --source 02-covered-patio=data/source/synthetic_simple_suburban_home/02-covered-patio.png,slow_lateral_gimbal_glide `
   --source 04-backyard-patio=data/source/synthetic_simple_suburban_home/04-backyard-patio.png,gentle_dolly_in `
-  --source 01-front-twilight=data/source/synthetic_simple_suburban_home/01-front-twilight.png,slow_lateral_gimbal_glide
+  --source 01-front-twilight=data/source/synthetic_simple_suburban_home/01-front-twilight.png,slow_lateral_gimbal_glide `
+  --bridge-candidate front-left-to-front-wide=3.5 `
+  --bridge-candidate patio-to-backyard=3.5 `
+  --bridge-candidate front-day-to-twilight=3.0
 
 uv run --no-sync python -m listing_to_reel video qa-ltx `
   --render-manifest runs/ltx-videos/<run-id>/manifest.json
@@ -112,10 +115,12 @@ uv run --no-sync python -m listing_to_reel video qa-ltx `
 
 The render manifest records the exact ComfyUI node graph, pinned model/encoder/VAE names,
 prompt, source hashes, coverage, output hashes, and generated clips. QA writes a mandatory
-human-review worksheet for every clip and for the spatial/lighting bridge candidates. Nothing is
-auto-accepted: reject a bridge if geometry changes; use clean cuts for unrelated views. The final
-portrait editor retains the complete landscape foreground over a blurred background fill. After
-recording human approval, assemble only the names that were approved, in edit order:
+human-review worksheet for every clip and for generated, user-selected spatial/lighting bridges.
+Each `--bridge-candidate` accepts a per-transition 2–4 second invented duration. Nothing is
+auto-accepted: reject a bridge if geometry changes or temporal artifacts occur; use clean cuts for
+unrelated views. The final portrait editor retains the complete landscape foreground over a blurred
+background fill. After recording human approval, assemble only the names that were approved, in
+edit order:
 
 ```powershell
 uv run --no-sync python -m listing_to_reel video assemble-ltx `

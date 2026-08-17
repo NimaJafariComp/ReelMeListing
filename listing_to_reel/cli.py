@@ -223,6 +223,14 @@ def render_ltx(
             "slow_lateral_gimbal_glide or gentle_dolly_in."
         ),
     ),
+    bridge_candidate: list[str] = typer.Option(
+        [],
+        "--bridge-candidate",
+        help=(
+            "Explicitly selected compatible pair, optionally with its invented duration in "
+            "seconds (for example patio-to-backyard=3.5). Valid range: 2–4 seconds."
+        ),
+    ),
     config: Path = typer.Option(
         Path("configs/ltx_comfyui.yaml"), "--config", exists=True, readable=True
     ),
@@ -248,10 +256,27 @@ def render_ltx(
         except ValueError as error:
             choices = ", ".join(item.value for item in LtxMotionTreatment)
             raise typer.BadParameter(f"Unknown LTX treatment; use one of: {choices}.") from error
+    bridge_candidate_ids: list[str] = []
+    bridge_duration_seconds: dict[str, float] = {}
+    for value in bridge_candidate:
+        candidate_id, separator, duration_text = value.partition("=")
+        if not candidate_id:
+            raise typer.BadParameter("Each --bridge-candidate requires a candidate name.")
+        if separator:
+            try:
+                duration_seconds = float(duration_text)
+            except ValueError as error:
+                raise typer.BadParameter("Bridge duration must be a number of seconds.") from error
+            if not 2.0 <= duration_seconds <= 4.0:
+                raise typer.BadParameter("Bridge duration must be between 2 and 4 seconds.")
+            bridge_duration_seconds[candidate_id] = duration_seconds
+        bridge_candidate_ids.append(candidate_id)
     manifest = render_ltx_views(
         LtxRenderRequest(
             property_id=property_id,
             source_views=source_views,
+            bridge_candidate_ids=bridge_candidate_ids,
+            bridge_duration_seconds=bridge_duration_seconds,
             configuration=load_ltx_comfyui_config(config),
             output_dir=output_dir,
         )
